@@ -1,0 +1,2 @@
+LAPACK_DEFS = -DUSE_GOTOBLAS
+LAPACK_LIBS = -L. -lgoto2 -lpthread

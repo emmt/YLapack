@@ -1,0 +1,2 @@
+LAPACK_DEFS = -I/usr/include/atlas
+LAPACK_LIBS = -llapack -lblas

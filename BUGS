@@ -1,0 +1,3 @@
+ - With SurviveGotoBLAS2 (version 3.14_RC_20110722), got an error:
+
+    GotoBLAS : Can't open shared memory. Terminated.

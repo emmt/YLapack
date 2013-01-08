@@ -1,0 +1,2 @@
+Use lpk_cast(arg, type, dims) to (temporarily) pretend that an array has
+different dimensions. (FIXME: there should be a way to specify an offset).

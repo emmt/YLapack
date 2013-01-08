@@ -1,0 +1,4 @@
+# see: http://math-atlas.sourceforge.net/errata.html#LINK
+LAPACK_DEFS = -I/usr/include/atlas
+#LAPACK_LIBS = -L/usr/lib/atlas-base -llapack_atlas -lptf77blas -lptcblas -latlas
+LAPACK_LIBS = -L/usr/lib/atlas-base -llapack_atlas -lf77blas -lcblas -latlas

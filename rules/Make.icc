@@ -1,0 +1,3 @@
+# Overrides compiler macros to use Intel C compiler (icc):
+CC = /opt/intel/bin/icc
+COPT_DEFAULT = -O2
