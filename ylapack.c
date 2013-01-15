@@ -51,6 +51,8 @@
 #define INCR_ADDRESS(ptr, nbytes)  \
   ((void *)((unsigned char *)(ptr) + (nbytes)))
 
+#define ROUND_UP(N, S) ((((S) - 1 + (N))/(S))*(S))
+
 #define YSCRATCH_BROKEN 0
 #define YTEMP_BROKEN    0
 #define YSWAP_BROKEN    0
@@ -910,7 +912,7 @@ void Y_lpk_axpy(int argc)
     y_error("argument Y must be a variable (not an expression)");
     return;
   }
-  
+
   /* Check sizes and types. */
   n = check_vector_sizes(&x, &y);
   type = Y_FLOAT;
@@ -1778,20 +1780,20 @@ void Y_lpk_ggsvd(int argc)
 
   if (--iarg < 0) goto bad_nargs;
   l_ref = yget_ref(iarg);
-  
+
   if (--iarg < 0) goto bad_nargs;
   a_ref = yget_ref(iarg);
   a_scratch = yarg_scratch(iarg);
   get_array(&a, iarg);
-  
+
   if (--iarg < 0) goto bad_nargs;
   b_ref = yget_ref(iarg);
   b_scratch = yarg_scratch(iarg);
   get_array(&b, iarg);
-  
+
   if (--iarg < 0) goto bad_nargs;
   alpha_ref = yget_ref(iarg);
-  
+
   if (--iarg < 0) goto bad_nargs;
   beta_ref = yget_ref(iarg);
 
@@ -1801,7 +1803,7 @@ void Y_lpk_ggsvd(int argc)
   q_ref = GET_NEXT_OPTIONAL_REF;
   i_ref = GET_NEXT_OPTIONAL_REF;
 #undef GET_NEXT_OPTIONAL_REF
-  
+
   /* Check arguments. */
   if (m <= 0 || n <= 0 || p <= 0 || m*n != a.ntot || p*n != b.ntot) {
     y_error("bad dimensions M, N and P");
@@ -1929,7 +1931,7 @@ void Y_lpk_ggsvd(int argc)
                  u, &ldu, v, &ldv, q, &ldq,
                  work, iwork, &info);
   } else if (type == Y_DOUBLE) {
-    (void)SGGSVD(jobu, jobv, jobq, &m, &n, &p, &k, &l,
+    (void)DGGSVD(jobu, jobv, jobq, &m, &n, &p, &k, &l,
                  a.data, &m, b.data, &p, alpha, beta,
                  u, &ldu, v, &ldv, q, &ldq,
                  work, iwork, &info);
@@ -1977,10 +1979,10 @@ void Y_lpk_ggsvd(int argc)
   SAVE_GLOBAL(k_ref, k);
 #undef SAVE_GLOBAL
 
+  return;
 
  bad_nargs:
   y_error("bad number of arguments");
-  
 }
 
 /*---------------------------------------------------------------------------*/
@@ -2397,7 +2399,7 @@ static void get_matrix(matrix_t *mat, int iarg)
   mat->arr.iarg = iarg;
   rank = mat->arr.dims[0];
   mat->nrows = (rank >= 1L ? mat->arr.dims[1] : 1);
-  mat->ncols = (rank >= 2L ? mat->arr.ntot/mat->arr.dims[1] : 1);  
+  mat->ncols = (rank >= 2L ? mat->arr.ntot/mat->arr.dims[1] : 1);
 }
 
 static BLAS_INTEGER check_vector_sizes(const vector_t *x, const vector_t *y)
