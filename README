@@ -76,8 +76,10 @@ GotoBLAS2:
 
     * SurviveGotoBLAS2 at http://prs.ism.ac.jp/~nakama/SurviveGotoBLAS2/
 
-I have not yet tried these but they may be worth having a look, especially if
-you have some recent processor not supported by GotoBLAS2-1.13.
+They are worth having a look, especially if you have some recent processor not
+supported by GotoBLAS2-1.13.  They also fix a number of bugs in GotoBLAS2.  We
+currently use the OpenBLAS (0.2.5) variant with no problem.  See notes below
+if you want to use the SurviveGotoBLAS2 variant.
 
 After unpacking the archive, enter the source directory of GotoBLAS2 and just
 type:
@@ -253,8 +255,8 @@ These times can be compared to LUsolve.
 LINKING WITH MKL
 ================
 
-When linking with the Math Kernel Library (MKL), you need
-to use 3 or 4 libraries:
+When linking with the Math Kernel Library (MKL), you need to use 3 or 4
+libraries:
 
   1. Interface layer.
 
