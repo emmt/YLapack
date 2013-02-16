@@ -606,6 +606,55 @@ extern lpk_hesv;
    SEE ALSO: LUsolve, unref, lpk_gesv, lpk_posv.
  */
 
+extern lpk_gesvd;
+extern lpk_gesdd;
+/* DOCUMENT t = lpk_gesvd(a,s,u,vt);
+         or     lpk_gesvd,a,s,u,vt;
+         or t = lpk_gesdd(a,s,u,vt);
+         or     lpk_gesdd,a,s,u,vt;
+
+     LPK_GESVD and LPK_GESDD compute the singular value decomposition (SVD) of
+     a M-by-N matrix A, optionally computing the left and/or right singular
+     vectors. The SVD is written:
+
+       A = U . SIGMA . conj(transpose(V))
+
+     where SIGMA is an M-by-N matrix which is zero except for its min(M,N)
+     diagonal elements, U is an M-by-M orthogonal matrix, and V is an N-by-N
+     orthogonal matrix.  The diagonal elements of SIGMA are the singular
+     values of A; they are real and non-negative, and are returned in
+     descending order.  The first min(M,N) columns of U and V are the left and
+     right singular vectors of A.
+
+     Arguments S, U and VT are (optional) output variables to store the
+     results: the singular values (the diagonal of SIGMA) are stored in S, the
+     left singular vectors are stored in the columns of U, and the right
+     singular vectors are stored in the rows of VT.  Note that these routines
+     return transpose(V) -- or conj(transpose(V)) for a complex matrix A --
+     not V.
+
+     LPK_GESDD uses a divide-and-conquer algorithm to compute the singular
+     vectors (if they are required) and is much faster than LPK_GESVD for
+     large matrices, but uses more workspace.  If none of U and VT are
+     specified, the singular vectors are not computed by LPK_GESDD.
+
+     LPK_GESVD is slower than LPK_GESDD for large matrices but uses less
+     workspace and is able to compute only the left or only the right singular
+     vectors (depending whether U and VT are specified as varaibles or not).
+
+     Keyword FULL can be set true to compute all singular vectors.  Otherwise,
+     only the first min(M,N) singular vectors are computed.
+
+     When called as a subroutine, an error is raised in case of failure;
+     otherwise, when called as function, an integer status T is returned:
+
+       T = 0: successful exit.
+       T < 0: the (-T)-th argument had an illegal value.
+       T > 0: algorithm did not converge.
+
+   SEE ALSO: SVdec, lpk_ggsvd.
+ */
+
 extern lpk_ggsvd;
 /* DOCUMENT inf = lpk_ggsvd(m, n, p, k, l, a, b, alpha, beta, u, v, q, i);
 
@@ -649,7 +698,9 @@ extern lpk_ggsvd;
          temp = alpha(j);
          alpha(j) = alpha(i(j));
          alpha(i(j)) = temp;
-*/
+
+   SEE ALSO: SVdec, lpk_gesvd.
+ */
 
 /*---------------------------------------------------------------------------*/
 /* INITIALIZATION */

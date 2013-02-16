@@ -134,46 +134,50 @@ static CBLAS_UPLO get_cblas_uplo(int iarg);
 #endif
 
 
-// ORDER:
+/* ORDER: */
 #define LPK_ROW_MAJOR  101
 #define LPK_COL_MAJOR  102
-// TRANSPOSE:
+/* TRANSPOSE: */
 #define LPK_NO_TRANS   111
 #define LPK_TRANS      112
 #define LPK_CONJ_TRANS 113
 #define LPK_ATLAS_CONJ 114
-// UPLO:
+/* UPLO: */
 #define LPK_UPPER      121
 #define LPK_LOWER      122
-// DIAG:
+/* DIAG: */
 #define LPK_NON_UNIT   131
 #define LPK_UNIT       132
-// SIDE:
+/* SIDE: */
 #define LPK_LEFT       141
 #define LPK_RIGHT      142
 
-/* Make some basic checking. */
-#if !(Y_CHAR >= 0)
-# error assertion failed: Y_CHAR >= 0
+/* Make some basic checking. (Needed for tables of functions, etc.) */
+#if (Y_CHAR != 0)
+# error assertion failed (Y_CHAR != 0)
 #endif
-#if !(Y_SHORT == Y_CHAR + 1)
-# error assertion failed: (Y_SHORT == Y_CHAR + 1)
+#if (Y_SHORT != 1)
+# error assertion failed (Y_SHORT != 1)
 #endif
-#if !(Y_INT == Y_SHORT + 1)
-# error assertion failed: (Y_INT == Y_SHORT + 1)
+#if (Y_INT != 2)
+# error assertion failed (Y_INT != 2)
 #endif
-#if !(Y_LONG == Y_INT + 1)
-# error assertion failed: (Y_LONG == Y_INT + 1)
+#if (Y_LONG != 3)
+# error assertion failed (Y_LONG != 3)
 #endif
-#if !(Y_FLOAT == Y_LONG + 1)
-# error assertion failed: (Y_FLOAT == Y_LONG + 1)
+#if (Y_FLOAT != 4)
+# error assertion failed (Y_FLOAT != 4)
 #endif
-#if !(Y_DOUBLE == Y_FLOAT + 1)
-# error assertion failed: (Y_DOUBLE == Y_FLOAT + 1)
+#if (Y_DOUBLE != 5)
+# error assertion failed (Y_DOUBLE != 5)
 #endif
-#if !(Y_COMPLEX == Y_DOUBLE + 1)
-# error assertion failed: (Y_COMPLEX == Y_DOUBLE + 1)
+#if (Y_COMPLEX != 6)
+# error assertion failed (Y_COMPLEX != 6)
 #endif
+
+/* PRIVATE DATA */
+static long full_index = -1L;
+static char msgbuf[128]; /* used for error messages */
 
 /*---------------------------------------------------------------------------*/
 /* HELPER MACROS */
@@ -239,7 +243,7 @@ void Y_lpk_init(int argc)
   if (ygets_l(0) != 1 || ygets_l(1) != 2) {
     y_error("yarg_swap broken in yapi.c");
   }
-
+  full_index = yget_global("full", 0);
   ypush_nil();
 }
 
@@ -1453,7 +1457,6 @@ void Y_lpk_potrs(int argc)
   linear_system_t sys;
   CHARACTER uplo[2];
   INTEGER info;
-  long n;
 
   if (argc != 3) {
     y_error("lpk_potrs takes three arguments");
@@ -1463,7 +1466,7 @@ void Y_lpk_potrs(int argc)
   get_lapack_uplo(2, uplo);
 
   /* get LHS matrix and RHS vector */
-  n = get_linear_system(&sys, 1, 0, REAL_SYSTEM);
+  get_linear_system(&sys, 1, 0, REAL_SYSTEM);
 
   /* solve the linear system */
   if (sys.type == Y_DOUBLE) {
@@ -1611,7 +1614,6 @@ void Y_lpk_posv(int argc)
   linear_system_t sys;
   CHARACTER uplo[2];
   INTEGER info;
-  long n;
 
   if (argc != 3) {
     y_error("lpk_posv takes three arguments");
@@ -1621,7 +1623,7 @@ void Y_lpk_posv(int argc)
   get_lapack_uplo(2, uplo);
 
   /* get LHS matrix and RHS vector */
-  n = get_linear_system(&sys, 1, 0, REAL_OR_COMPLEX_SYSTEM);
+  get_linear_system(&sys, 1, 0, REAL_OR_COMPLEX_SYSTEM);
 
   /* solve the linear system */
   if (sys.type == Y_DOUBLE) {
@@ -1750,6 +1752,307 @@ static void free_global(long index)
   }
 }
 #endif
+
+/* Force a numerical array stored on the stack to be a temporary one and
+   returns the address of the array. */
+static void *force_scratch(int iarg, void *ptr, int type,
+                           long ntot, long *dims);
+
+static void *push_1d(int type, long n);
+static void *push_2d(int type, long m, long n);
+
+static void gesvd(int argc, int divide_and_conquer);
+
+void Y_lpk_gesvd(int argc)
+{
+  gesvd(argc, 0);
+}
+
+void Y_lpk_gesdd(int argc)
+{
+  gesvd(argc, 1);
+}
+
+static void gesvd(int argc, int divide_and_conquer)
+{
+  long dims[Y_DIMSIZE];
+  void *a, *s, *u, *vt, *work, *rwork, *iwork;
+  long key_ref, s_ref, u_ref, vt_ref, ntot, offset, size;
+  INTEGER m, n, info, lda, ldu, ldvt, lwork, lrwork;
+  int full, iarg, type, positional_args;
+
+  /* Parse arguments. */
+  full = FALSE;
+  a = NULL;
+  s_ref = -1L;
+  u_ref = -1L;
+  vt_ref = -1L;
+  type = Y_VOID;
+  m = 0;
+  n = 0;
+  positional_args = 0;
+  for (iarg = argc - 1; iarg >= 0; --iarg) {
+    key_ref = yarg_key(iarg);
+    if (key_ref >= 0L) {
+      --iarg;
+      full = yarg_true(iarg);
+    } else {
+      ++positional_args;
+      if (positional_args == 1) {
+        /* Get argument A making sure it is a temporary array because GESVD
+           and GESDD destroy the input matrix. */
+        type = yarg_typeid(iarg);
+        if (type > Y_COMPLEX || yarg_rank(iarg) !=  2) {
+          y_error("expecting a real or complex matrix");
+        }
+        if (type <= Y_FLOAT) {
+          a = ygeta_f(iarg, &ntot, dims);
+          type = Y_FLOAT;
+        } else if (type == Y_DOUBLE) {
+          a = ygeta_d(iarg, &ntot, dims);
+        } else {
+          a = ygeta_z(iarg, &ntot, dims);
+        }
+        a = force_scratch(iarg, a, type, ntot, dims);
+        m = dims[1];
+        n = dims[2];
+      } else if (positional_args == 2) {
+        /* Get argument S. */
+        s_ref = yget_ref(iarg);
+      } else if (positional_args == 3) {
+        /* Get argument U. */
+        u_ref = yget_ref(iarg);
+      } else if (positional_args == 4) {
+        /* Get argument VT. */
+        vt_ref = yget_ref(iarg);
+      } else {
+        y_error("too many arguments");
+      }
+    }
+  }
+  if (positional_args < 1) {
+    y_error("too few arguments");
+  }
+
+  /* The routine will push 4 items on top of the stack: S, U, VT and a
+     workspace. (This is less than 8 items, so there are no needs to call
+     ypush_check in principle.) */
+  ypush_check(4);
+  
+  /* Create S, U and VT on top of the stack.  FIXME: use A to save storage. */
+  s = push_1d((type == Y_FLOAT ? Y_FLOAT : Y_DOUBLE), MIN(m, n));
+  if (u_ref >= 0L || (divide_and_conquer && vt_ref >= 0L)) {
+    ldu = m;
+    u = push_2d(type, ldu, (full ? m : MIN(m, n)));
+  } else {
+    ldu = 1;
+    u = NULL;
+    ypush_nil();
+  }
+  if (vt_ref >= 0L || (divide_and_conquer && u_ref >= 0L)) {
+    ldvt = (full ? n : MIN(m, n));
+    vt = push_2d(type, ldvt, n);
+  } else {
+    ldvt = 1;
+    vt = NULL;
+    ypush_nil();
+  }
+
+  /* Perform the decomposition.  First get the optimal LWORK size, then
+     allocate workspaces and execute the operations. */
+  lda = m;
+  lwork = -1;
+  info = 0;
+  if (divide_and_conquer) {
+    /* Divide-and-conquer version of the algorithm. */
+    CHARACTER jobz[2];
+    jobz[0] = (u == NULL ? 'N' : (full ? 'A' : 'S'));
+    jobz[1] = '\0';
+    if (type == Y_FLOAT) {
+      float temp;
+      SGESDD(jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+             &temp, &lwork, NULL, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        offset = ROUND_UP(lwork*sizeof(float), sizeof(INTEGER));
+        size = offset + 8*MIN(m,n)*sizeof(INTEGER);
+        work = ypush_scratch(size, NULL);
+        iwork = INCR_ADDRESS(work, offset);
+        SGESDD(jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+               work, &lwork, iwork, &info);
+      }
+    } else if (type == Y_DOUBLE) {
+      double temp;
+      DGESDD(jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+             &temp, &lwork, NULL, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        offset = ROUND_UP(lwork*sizeof(double), sizeof(INTEGER));
+        size = offset + 8*MIN(m,n)*sizeof(INTEGER);
+        work = ypush_scratch(size, NULL);
+        iwork = INCR_ADDRESS(work, offset);
+        DGESDD(jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+               work, &lwork, iwork, &info);
+      }
+    } else {
+      double temp[2];
+      ZGESDD(jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+             temp, &lwork, NULL, NULL, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp[0];
+        if (u == NULL) {
+          lrwork = 5*MIN(m,n);
+        } else {
+          /* FIXME: simplify. */
+          lrwork = MIN(m,n)*MAX(5*MIN(m,n) + 7, 2*MAX(m,n) + 2*MIN(m,n) + 1);
+        }
+        offset = ROUND_UP((lrwork + 2*lwork)*sizeof(double), sizeof(INTEGER));
+        size = offset + 8*MIN(m,n)*sizeof(INTEGER);
+        rwork = ypush_scratch(size, NULL);
+        work = INCR_ADDRESS(rwork, lrwork*sizeof(double));
+        iwork = INCR_ADDRESS(rwork, offset);
+        ZGESDD(jobz, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+               work, &lwork, rwork, iwork, &info);
+      }
+    }
+  } else {
+    /* Simple version of the algorithm.*/
+    CHARACTER jobu[2], jobvt[2];
+    jobu[0] = (u == NULL ? 'N' : (full ? 'A' : 'S'));
+    jobu[1] = '\0';
+    jobvt[0] = (vt == NULL ? 'N' : (full ? 'A' : 'S'));
+    jobvt[1] = '\0';
+    if (type == Y_FLOAT) {
+      float temp;
+      SGESVD(jobu, jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+             &temp, &lwork, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        work = ypush_scratch(lwork*sizeof(float), NULL);
+        SGESVD(jobu, jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+               work, &lwork, &info);
+      }
+    } else if (type == Y_DOUBLE) {
+      double temp;
+      DGESVD(jobu, jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+             &temp, &lwork, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        work = ypush_scratch(lwork*sizeof(double), NULL);
+        DGESVD(jobu, jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+               work, &lwork, &info);
+      }
+    } else {
+      double temp[2];
+      ZGESVD(jobu, jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+             temp, &lwork, NULL, &info);
+      if (info == 0) {
+        long lrwork = 5*MIN(m,n);
+        lwork = (INTEGER)temp[0];
+        work = ypush_scratch((2*lwork + lrwork)*sizeof(double), NULL);
+        rwork = INCR_ADDRESS(work, 2*lwork*sizeof(double));
+        ZGESVD(jobu, jobvt, &m, &n, a, &lda, s, u, &ldu, vt, &ldvt,
+               work, &lwork, rwork, &info);
+      }
+    }
+  }
+
+  /* Build result. */
+  yarg_drop(1); /* drop workspace */
+  if (info == 0) {
+    /* Algorithm was successful.  Extract results from the stack. */
+    if (vt_ref >= 0L) {
+      yput_global(vt_ref, 0);
+    }
+    if (u_ref >= 0L) {
+      yput_global(u_ref, 1);
+    }
+    if (s_ref >= 0L) {
+      yput_global(s_ref, 2);
+    }
+  } else {
+    /* Algorithm failed.  raise an error if called as a subroutine. */
+    if (yarg_subroutine()) {
+      char *msg;
+      if (info > 0) {
+        msg = "algorithm did not converge";
+      } else {
+        sprintf(msgbuf,
+                "bug in %s wrapper: %d-th argument had an illegal value",
+                (divide_and_conquer ? "xGESDD" : "xGESVD"), -(int)info);
+        msg = msgbuf;
+      }
+      y_error(msg);
+    }
+  }
+  ypush_long(info);
+}
+
+typedef void *(push_array_func)(long *dims);
+
+static push_array_func *push_array_table[] = {
+  (push_array_func *)ypush_c,
+  (push_array_func *)ypush_s,
+  (push_array_func *)ypush_i,
+  (push_array_func *)ypush_l,
+  (push_array_func *)ypush_f,
+  (push_array_func *)ypush_d,
+  (push_array_func *)ypush_z
+};
+
+static size_t elsize_table[] = {
+  sizeof(char),
+  sizeof(short),
+  sizeof(int),
+  sizeof(long),
+  sizeof(float),
+  sizeof(double),
+  2*sizeof(double)
+};
+
+/* Force a numerical array stored on the stack to be a temporary one. */
+static void *force_scratch(int iarg, void *ptr, int type,
+                           long ntot, long *dims)
+{
+  void *tmp;
+  if (yarg_scratch(iarg)) {
+    return ptr;
+  }
+  if (type < 0 || type > 6) {
+    y_error("bad type");
+    return NULL;
+  }
+  tmp = (*push_array_table[type])(dims);
+  memcpy(tmp, ptr, elsize_table[type]*ntot);
+  yarg_swap(iarg + 1, 0);
+  yarg_drop(1);
+  return tmp;
+}
+
+static void *push_1d(int type, long n)
+{
+  long dims[2];
+  if (type < 0 || type > 6) {
+    y_error("bad type");
+    return NULL;
+  }
+  dims[0] = 1;
+  dims[1] = n;
+  return (*push_array_table[type])(dims);
+}
+
+static void *push_2d(int type, long m, long n)
+{
+  long dims[3];
+  if (type < 0 || type > 6) {
+    y_error("bad type");
+    return NULL;
+  }
+  dims[0] = 2;
+  dims[1] = m;
+  dims[2] = n;
+  return (*push_array_table[type])(dims);
+}
 
 void Y_lpk_ggsvd(int argc)
 {

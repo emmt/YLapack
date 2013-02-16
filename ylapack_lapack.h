@@ -1302,6 +1302,70 @@ PROTOTYPE(CHESV, float);
 PROTOTYPE(ZHESV, double);
 #undef PROTOTYPE
 
+/* _GESVD -- computes the singular value decomposition (SVD) by 
+ *           divide-and-conquer algorithm. */
+#define PROTOTYPE(NAME,REAL)                            \
+  extern int NAME(CONST CHARACTER *JOBU,                \
+                  CONST CHARACTER *JOBVT,               \
+                  CONST INTEGER *M,                     \
+                  CONST INTEGER *N,                     \
+		  REAL *A, CONST INTEGER *LDA,          \
+		  REAL *S,                              \
+                  REAL *U, CONST INTEGER *LDU,          \
+                  REAL *VT, CONST INTEGER *LDVT,        \
+                  REAL *WORK, CONST INTEGER *LWORK,     \
+                  INTEGER *INFO)
+PROTOTYPE(SGESVD, float);
+PROTOTYPE(DGESVD, double);
+#undef PROTOTYPE
+#define PROTOTYPE(NAME,REAL)                            \
+  extern int NAME(CONST CHARACTER *JOBU,                \
+                  CONST CHARACTER *JOBVT,               \
+                  CONST INTEGER *M,                     \
+                  CONST INTEGER *N,                     \
+		  REAL *A, CONST INTEGER *LDA,          \
+		  REAL *S,                              \
+                  REAL *U, CONST INTEGER *LDU,          \
+                  REAL *VT, CONST INTEGER *LDVT,        \
+                  REAL *WORK, CONST INTEGER *LWORK,     \
+                  REAL *RWORK,                          \
+                  INTEGER *INFO)
+PROTOTYPE(CGESVD, float);
+PROTOTYPE(ZGESVD, double);
+#undef PROTOTYPE
+
+/* _GESDD -- computes the singular value decomposition (SVD) by 
+ *           divide-and-conquer algorithm. */
+#define PROTOTYPE(NAME,REAL)                           \
+  extern int NAME(CONST CHARACTER *JOBZ,               \
+                  CONST INTEGER *M,                    \
+                  CONST INTEGER *N,                    \
+		  REAL *A, CONST INTEGER *LDA,         \
+		  REAL *S,                             \
+                  REAL *U, CONST INTEGER *LDU,         \
+                  REAL *VT, CONST INTEGER *LDVT,       \
+                  REAL *WORK, CONST INTEGER *LWORK,    \
+                  INTEGER *IWORK,                      \
+                  INTEGER *INFO)
+PROTOTYPE(SGESDD, float);
+PROTOTYPE(DGESDD, double);
+#undef PROTOTYPE
+#define PROTOTYPE(NAME,REAL)                           \
+  extern int NAME(CONST CHARACTER *JOBZ,               \
+                  CONST INTEGER *M,                    \
+                  CONST INTEGER *N,                    \
+		  REAL *A, CONST INTEGER *LDA,         \
+		  REAL *S,                             \
+                  REAL *U, CONST INTEGER *LDU,         \
+                  REAL *VT, CONST INTEGER *LDVT,       \
+                  REAL *WORK, CONST INTEGER *LWORK,    \
+                  REAL *RWORK,                         \
+                  INTEGER *IWORK,                      \
+                  INTEGER *INFO)
+PROTOTYPE(CGESDD, float);
+PROTOTYPE(ZGESDD, double);
+#undef PROTOTYPE
+
 /* _GGSVD -- computes the generalized singular value decomposition (GSVD). */
 #define PROTOTYPE(NAME,REAL)                                    \
   extern int NAME(CONST CHARACTER *JOBU, CONST CHARACTER *JOBV, \

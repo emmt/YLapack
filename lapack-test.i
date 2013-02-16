@@ -325,3 +325,46 @@ func lpk_test1(from=, to=, step=, type=)
 
 
 
+func lpk_test_gesvd(m,n,type=,full=,dac=)
+{
+  local s, u, vt, s0, u0, v0t;
+
+  if (is_void(type)) type = double;
+  if (type == complex) {
+    a = random_n(m,n) + 1i*random_n(m,n);
+  } else if (type == double) {
+    a = random_n(m,n);
+  } else if (type == float) {
+    a = float(random_n(m,n));
+  } else {
+    error, "TYPE must be: float, double or complex";
+  }
+  
+  a0 = a;
+  
+  t = (dac ? lpk_gesdd : lpk_gesvd)(a,s,u,vt);
+  if (t !=0) error;
+
+  //write, format="checking %s: ", "A";
+  //stat, a - a0;
+
+  if (type != complex) {
+    s0 = SVdec(a0, u0, v0t);
+    write, format="checking %s: ", "S";
+    stat, s - s0;
+  }
+  
+  p = min(m,n);
+  t = u(,1:p)(,+)*(s*vt(1:p,))(+,);
+
+  write, format="checking %s: ", "A";
+  stat, a - t;
+  
+
+  //write, format="checking %s: ", "U";
+  //stat, u - u0;
+  // 
+  //write, format="checking %s: ", "V";
+  //stat, vt - v0t;
+
+}
