@@ -161,7 +161,7 @@ release: $(RELEASE_NAME)
 
 $(RELEASE_NAME):
 	@if test "x$(RELEASE_VERSION)" = "x"; then \
-	  echo >&2 "set package version:  make RELEASE_VERSION=... archive"; \
+	  echo >&2 "set package version:  make RELEASE_VERSION=... release"; \
 	else \
           dir=`basename "$(RELEASE_NAME)" .tar.bz2`; \
 	  if test "x$$dir" = "x" -o "x$$dir" = "x."; then \
@@ -170,8 +170,16 @@ $(RELEASE_NAME):
 	    echo >&2 "directory $$dir already exists"; \
 	  else \
 	    mkdir -p "$$dir"; \
-	    cp -a $(RELEASE_FILES) "$$dir/."; \
-	    rm -if "$$dir"/*~ "$$dir"/*/*~; \
+	    for src in $(RELEASE_FILES); do \
+	      dst="$$dir/$$src"; \
+	      if test "$$src" = "Makefile"; then \
+	        sed <"$$src" >"$$dst" -e 's/^\( *Y_\(MAKEDIR\|EXE\(\|_PKGS\|_HOME\|_SITE\)\|HOME_PKG\) *=\).*/\1/'; \
+	        touch -r "$$src" "$$dst"; \
+	      else \
+	        cp -p "$$src" "$$dst"; \
+	      fi; \
+	    done; \
+	    rm -f "$$dir"/*~ "$$dir"/*/*~; \
 	    echo "$(RELEASE_VERSION)" > "$$dir/VERSION"; \
 	    tar jcf "$(RELEASE_NAME)" "$$dir"; \
 	    rm -rf "$$dir"; \
