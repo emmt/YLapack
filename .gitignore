@@ -1,6 +1,8 @@
 # Specific files #
 ##################
 ywrap.c
+devel/
+build/
 
 # Automatic backups #
 #####################
