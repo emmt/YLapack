@@ -177,6 +177,7 @@ static CBLAS_UPLO get_cblas_uplo(int iarg);
 
 /* PRIVATE DATA */
 static long full_index = -1L;
+static long slow_index = -1L;
 static char msgbuf[128]; /* used for error messages */
 
 /*---------------------------------------------------------------------------*/
@@ -244,6 +245,7 @@ void Y_lpk_init(int argc)
     y_error("yarg_swap broken in yapi.c");
   }
   full_index = yget_global("full", 0);
+  slow_index = yget_global("slow", 0);
   ypush_nil();
 }
 
@@ -1761,6 +1763,183 @@ static void *force_scratch(int iarg, void *ptr, int type,
 static void *push_1d(int type, long n);
 static void *push_2d(int type, long m, long n);
 
+/*---------------------------------------------------------------------------*/
+/* EIGENVALUES AND EIGENVECTORS */
+
+void Y_lpk_eigen(int argc)
+{
+  CHARACTER uplo[2], jobz[2];
+  long dims[Y_DIMSIZE];
+  void *a, *w, *work, *rwork, *iwork;
+  long index, v_ref, ntot, offset;
+  INTEGER n, info, lda, lwork, lrwork, liwork;
+  int slow, iarg, type, positional_args;
+
+  /* Parse arguments. */
+  slow = FALSE;
+  a = NULL;
+  v_ref = -1L;
+  type = Y_VOID;
+  n = 0;
+  positional_args = 0;
+  for (iarg = argc - 1; iarg >= 0; --iarg) {
+    index = yarg_key(iarg);
+    if (index >= 0L) {
+      --iarg;
+      if (index == slow_index) {
+        slow = yarg_true(iarg);
+      } else {
+        y_error("unknown keyword");
+      }
+    } else {
+      ++positional_args;
+      if (positional_args == 1) {
+        /* Get UPLO flag. */
+        get_lapack_uplo(iarg, uplo);
+      } else if (positional_args == 2) {
+        /* Get argument A making sure it is a temporary array because SYEV(D)
+           and HEEV(D) destroy the input matrix. */
+        a = ygeta_any(iarg, &ntot, dims, &type);
+        if (type > Y_COMPLEX || dims[0] !=  2 || dims[1] != dims[2]) {
+          y_error("expecting N-by-N real or complex matrix A");
+        }
+        if (type < Y_FLOAT) {
+          a = ygeta_coerce(iarg, a, ntot, dims, type, Y_FLOAT);
+          type = Y_FLOAT;
+        } else {
+          a = force_scratch(iarg, a, type, ntot, dims);
+        }
+        n = dims[1];
+      } else if (positional_args == 3) {
+        /* Get argument V. */
+        v_ref = yget_ref(iarg);
+      } else {
+        y_error("too many arguments");
+      }
+    }
+  }
+  if (positional_args < 1) {
+    y_error("too few arguments");
+  }
+
+  /* The routine will push 2 items on top of the stack: the array W to store
+     eigenvalues and a workspace. (This is less than 8 items, so there are no
+     needs to call ypush_check in principle.) */
+  ypush_check(2);
+  
+  /* Create W on top of the stack. */
+  w = push_1d((type == Y_FLOAT ? Y_FLOAT : Y_DOUBLE), n);
+
+  /* Perform the decomposition.  First get the optimal LWORK size, then
+     allocate workspaces and execute the operations. */
+  lda = n;
+  lwork = -1;
+  liwork = -1;
+  info = 0;
+  jobz[0] = (v_ref < 0L ? 'N' : 'V');
+  jobz[1] = '\0';
+  if (slow) {
+    /* Simple version of the algorithm.*/
+    if (type == Y_FLOAT) {
+      float temp;
+      SSYEV(jobz, uplo, &n, a, &lda, w, &temp, &lwork, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        work = ypush_scratch(lwork*sizeof(float), NULL);
+        SSYEV(jobz, uplo, &n, a, &lda, w, work, &lwork, &info);
+      }
+    } else if (type == Y_DOUBLE) {
+      double temp;
+      DSYEV(jobz, uplo, &n, a, &lda, w, &temp, &lwork, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        work = ypush_scratch(lwork*sizeof(double), NULL);
+        DSYEV(jobz, uplo, &n, a, &lda, w, work, &lwork, &info);
+      }
+    } else {
+      double temp[2];
+      ZHEEV(jobz, uplo, &n, a, &lda, w, temp, &lwork, NULL, &info);
+      if (info == 0) {
+        lrwork = 3*MAX(n,1) - 2;
+        lwork = (INTEGER)temp[0];
+        work = ypush_scratch((2*lwork + lrwork)*sizeof(double), NULL);
+        rwork = INCR_ADDRESS(work, 2*lwork*sizeof(double));
+        ZHEEV(jobz, uplo, &n, a, &lda, w, work, &lwork, rwork, &info);
+      }
+    }
+  } else {
+    /* Divide-and-conquer version of the algorithm. */
+    if (type == Y_FLOAT) {
+      float temp;
+      INTEGER itemp;
+      SSYEVD(jobz, uplo, &n, a, &lda, w, &temp, &lwork,
+             &itemp, &liwork, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        liwork = itemp;
+        offset = ROUND_UP(lwork*sizeof(float), sizeof(INTEGER));
+        work = ypush_scratch(offset + liwork*sizeof(INTEGER), NULL);
+        iwork = INCR_ADDRESS(work, offset);
+        SSYEVD(jobz, uplo, &n, a, &lda, w, work, &lwork,
+               iwork, &liwork, &info);
+      }
+    } else if (type == Y_DOUBLE) {
+      double temp;
+      INTEGER itemp;
+      DSYEVD(jobz, uplo, &n, a, &lda, w, &temp, &lwork,
+             &itemp, &liwork, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp;
+        liwork = itemp;
+        offset = ROUND_UP(lwork*sizeof(double), sizeof(INTEGER));
+        work = ypush_scratch(offset + liwork*sizeof(INTEGER), NULL);
+        iwork = INCR_ADDRESS(work, offset);
+        DSYEVD(jobz, uplo, &n, a, &lda, w, work, &lwork,
+               iwork, &liwork, &info);
+      }
+    } else {
+      double temp[2], rtemp;
+      INTEGER itemp;
+      ZHEEVD(jobz, uplo, &n, a, &lda, w, temp, &lwork, &rtemp, &lrwork,
+             &itemp, &liwork, &info);
+      if (info == 0) {
+        lwork = (INTEGER)temp[0];
+        liwork = itemp;
+        lrwork = (INTEGER)rtemp;
+        offset = ROUND_UP((lrwork + 2*lwork)*sizeof(double), sizeof(INTEGER));
+        work = ypush_scratch(offset + liwork*sizeof(INTEGER), NULL);
+        rwork = INCR_ADDRESS(work, 2*lwork*sizeof(double));
+        iwork = INCR_ADDRESS(work, offset);
+        ZHEEVD(jobz, uplo, &n, a, &lda, w, work, &lwork, rwork, &lrwork,
+               iwork, &liwork, &info);
+      }
+    }
+  }
+
+  /* Build result. */
+  if (info != 0) {
+    /* Algorithm failed.  raise an error if called as a subroutine. */
+    char *msg;
+    if (info > 0) {
+      msg = "algorithm did not converge";
+    } else {
+        sprintf(msgbuf,
+                "bug in x%s%s wrapper: %d-th argument had an illegal value",
+                (type == Y_COMPLEX ? "HEEV" : "SYEV" ),
+                (slow ? "" : "D"), -(int)info);
+        msg = msgbuf;
+    }
+    y_error(msg);
+  }
+  yarg_drop(1); /* drop workspace */
+  if (v_ref >= 0L) {
+    yput_global(v_ref, 1);
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+/* SINGULAR VALUE DECOMPOSITION */
+
 static void gesvd(int argc, int divide_and_conquer);
 
 void Y_lpk_gesvd(int argc)
@@ -1777,7 +1956,7 @@ static void gesvd(int argc, int divide_and_conquer)
 {
   long dims[Y_DIMSIZE];
   void *a, *s, *u, *vt, *work, *rwork, *iwork;
-  long key_ref, s_ref, u_ref, vt_ref, ntot, offset, size;
+  long index, s_ref, u_ref, vt_ref, ntot, offset, size;
   INTEGER m, n, info, lda, ldu, ldvt, lwork, lrwork;
   int full, iarg, type, positional_args;
 
@@ -1792,10 +1971,14 @@ static void gesvd(int argc, int divide_and_conquer)
   n = 0;
   positional_args = 0;
   for (iarg = argc - 1; iarg >= 0; --iarg) {
-    key_ref = yarg_key(iarg);
-    if (key_ref >= 0L) {
+    index = yarg_key(iarg);
+    if (index >= 0L) {
       --iarg;
-      full = yarg_true(iarg);
+      if (index == full_index) {
+        full = yarg_true(iarg);
+      } else {
+        y_error("unknown keyword");
+      }
     } else {
       ++positional_args;
       if (positional_args == 1) {

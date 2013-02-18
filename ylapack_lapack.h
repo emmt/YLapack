@@ -1302,8 +1302,62 @@ PROTOTYPE(CHESV, float);
 PROTOTYPE(ZHESV, double);
 #undef PROTOTYPE
 
-/* _GESVD -- computes the singular value decomposition (SVD) by 
- *           divide-and-conquer algorithm. */
+/* _SYEV -- computes the eigenvalues and eigenvectors of a symmetric or
+ *          hermitian matrix. */
+#define PROTOTYPE(NAME,REAL)                            \
+  extern int NAME(CONST CHARACTER *JOBZ,                \
+                  CONST CHARACTER *UPLO,                \
+                  CONST INTEGER *N,                     \
+		  REAL *A, CONST INTEGER *LDA,          \
+		  REAL *W,                              \
+                  REAL *WORK, CONST INTEGER *LWORK,     \
+                  INTEGER *INFO)
+PROTOTYPE(SSYEV, float);
+PROTOTYPE(DSYEV, double);
+#undef PROTOTYPE
+#define PROTOTYPE(NAME,REAL)                            \
+  extern int NAME(CONST CHARACTER *JOBZ,                \
+                  CONST CHARACTER *UPLO,                \
+                  CONST INTEGER *N,                     \
+		  REAL *A, CONST INTEGER *LDA,          \
+		  REAL *W,                              \
+                  REAL *WORK, CONST INTEGER *LWORK,     \
+                  REAL *RWORK,                          \
+                  INTEGER *INFO)
+PROTOTYPE(CHEEV, float);
+PROTOTYPE(ZHEEV, double);
+#undef PROTOTYPE
+
+/* _SYEVD -- computes the eigenvalues and eigenvectors of a symmetric or
+ *           hermitian matrix, using a divide and conquer algorithm for the
+ *           eigenvectors. */
+#define PROTOTYPE(NAME,REAL)                                    \
+  extern int NAME(CONST CHARACTER *JOBZ,                        \
+                  CONST CHARACTER *UPLO,                        \
+                  CONST INTEGER *N,                             \
+		  REAL *A, CONST INTEGER *LDA,                  \
+		  REAL *W,                                      \
+                  REAL *WORK, CONST INTEGER *LWORK,             \
+                  INTEGER *IWORK, CONST INTEGER *LIWORK,        \
+                  INTEGER *INFO)
+PROTOTYPE(SSYEVD, float);
+PROTOTYPE(DSYEVD, double);
+#undef PROTOTYPE
+#define PROTOTYPE(NAME,REAL)                                    \
+  extern int NAME(CONST CHARACTER *JOBZ,                        \
+                  CONST CHARACTER *UPLO,                        \
+                  CONST INTEGER *N,                             \
+		  REAL *A, CONST INTEGER *LDA,                  \
+		  REAL *W,                                      \
+                  REAL *WORK, CONST INTEGER *LWORK,             \
+                  REAL *RWORK, CONST INTEGER *LRWORK,           \
+                  INTEGER *IWORK, CONST INTEGER *LIWORK,        \
+                  INTEGER *INFO)
+PROTOTYPE(CHEEVD, float);
+PROTOTYPE(ZHEEVD, double);
+#undef PROTOTYPE
+
+/* _GESVD -- computes the singular value decomposition (SVD). */
 #define PROTOTYPE(NAME,REAL)                            \
   extern int NAME(CONST CHARACTER *JOBU,                \
                   CONST CHARACTER *JOBVT,               \
@@ -1335,7 +1389,7 @@ PROTOTYPE(ZGESVD, double);
 #undef PROTOTYPE
 
 /* _GESDD -- computes the singular value decomposition (SVD) by 
- *           divide-and-conquer algorithm. */
+ *           a divide-and-conquer algorithm. */
 #define PROTOTYPE(NAME,REAL)                           \
   extern int NAME(CONST CHARACTER *JOBZ,               \
                   CONST INTEGER *M,                    \

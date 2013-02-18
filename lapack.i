@@ -606,6 +606,22 @@ extern lpk_hesv;
    SEE ALSO: LUsolve, unref, lpk_gesv, lpk_posv.
  */
 
+extern lpk_eigen;
+/* DOCUMENT w = lpk_eigen(a);
+         or w = lpk_eigen(a, v);
+
+     LPK_EIGEN computes the eigenvalues W of the N-by-N symmetric (or
+     Hermitian) matrix A, optionally computing the eigenvectors.  The
+     eigenvectors are stored in variable V if it is specified; otherwise,
+     they are not computed.
+     
+     Keyword SLOW can be set true to not use the faster divide-and-conquer
+     algorithm to compute he eigenvectors.
+
+
+   SEE ALSO: SVdec, lpk_gesvd, lpk_ggsvd.
+ */
+
 extern lpk_gesvd;
 extern lpk_gesdd;
 /* DOCUMENT t = lpk_gesvd(a,s,u,vt);
@@ -640,7 +656,7 @@ extern lpk_gesdd;
 
      LPK_GESVD is slower than LPK_GESDD for large matrices but uses less
      workspace and is able to compute only the left or only the right singular
-     vectors (depending whether U and VT are specified as varaibles or not).
+     vectors (depending whether U and VT are specified as variables or not).
 
      Keyword FULL can be set true to compute all singular vectors.  Otherwise,
      only the first min(M,N) singular vectors are computed.
@@ -652,7 +668,7 @@ extern lpk_gesdd;
        T < 0: the (-T)-th argument had an illegal value.
        T > 0: algorithm did not converge.
 
-   SEE ALSO: SVdec, lpk_ggsvd.
+   SEE ALSO: SVdec, lpk_eigen, lpk_ggsvd.
  */
 
 extern lpk_ggsvd;
