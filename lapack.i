@@ -608,15 +608,31 @@ extern lpk_hesv;
 
 extern lpk_eigen;
 /* DOCUMENT w = lpk_eigen(a);
-         or w = lpk_eigen(a, v);
+         or w = lpk_eigen(a, z);
 
      LPK_EIGEN computes the eigenvalues W of the N-by-N symmetric (or
      Hermitian) matrix A, optionally computing the eigenvectors.  The
-     eigenvectors are stored in variable V if it is specified; otherwise,
-     they are not computed.
+     eigenvectors are stored in variable Z if it is specified; otherwise,
+     they are not computed.  If they are required, the eigenvectors are
+     stored in the columns of Z.
+
+     The spectral factorization of A writes:
+
+        A = Z . diag(W) . transpose(Z)
+
+     in Yorick notation:
+
+        A = (Z*W(-,))(,+)*Z(,+) = Z(,+)*(W(-,)*Z)(,+)
      
+     Keyword LOWER can be set true to indicate that the lower triangular part
+     of the matrix A has been initialized (the upper part is not used).  The
+     default is to assume that the upper triangular part has been initialized
+     and not use the lower part.
+
      Keyword SLOW can be set true to not use the faster divide-and-conquer
-     algorithm to compute he eigenvectors.
+     algorithm to compute the eigenvectors.
+
+     LPK_EIGEN uses LAPACK routines (S/D)SYEV, (S/D)SYEVD, ZHEEV and ZHEEVD. 
 
 
    SEE ALSO: SVdec, lpk_gesvd, lpk_ggsvd.

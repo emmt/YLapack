@@ -177,6 +177,7 @@ static CBLAS_UPLO get_cblas_uplo(int iarg);
 
 /* PRIVATE DATA */
 static long full_index = -1L;
+static long lower_index = -1L;
 static long slow_index = -1L;
 static char msgbuf[128]; /* used for error messages */
 
@@ -245,6 +246,7 @@ void Y_lpk_init(int argc)
     y_error("yarg_swap broken in yapi.c");
   }
   full_index = yget_global("full", 0);
+  lower_index = yget_global("lower", 0);
   slow_index = yget_global("slow", 0);
   ypush_nil();
 }
@@ -1773,11 +1775,13 @@ void Y_lpk_eigen(int argc)
   void *a, *w, *work, *rwork, *iwork;
   long index, v_ref, ntot, offset;
   INTEGER n, info, lda, lwork, lrwork, liwork;
-  int slow, iarg, type, positional_args;
+  int slow, lower, iarg, type, positional_args, a_iarg;
 
   /* Parse arguments. */
   slow = FALSE;
+  lower = FALSE;
   a = NULL;
+  a_iarg = -1;
   v_ref = -1L;
   type = Y_VOID;
   n = 0;
@@ -1788,15 +1792,14 @@ void Y_lpk_eigen(int argc)
       --iarg;
       if (index == slow_index) {
         slow = yarg_true(iarg);
+      } else if (index == lower_index) {
+        lower = yarg_true(iarg);
       } else {
         y_error("unknown keyword");
       }
     } else {
       ++positional_args;
       if (positional_args == 1) {
-        /* Get UPLO flag. */
-        get_lapack_uplo(iarg, uplo);
-      } else if (positional_args == 2) {
         /* Get argument A making sure it is a temporary array because SYEV(D)
            and HEEV(D) destroy the input matrix. */
         a = ygeta_any(iarg, &ntot, dims, &type);
@@ -1810,7 +1813,8 @@ void Y_lpk_eigen(int argc)
           a = force_scratch(iarg, a, type, ntot, dims);
         }
         n = dims[1];
-      } else if (positional_args == 3) {
+        a_iarg = iarg;
+      } else if (positional_args == 2) {
         /* Get argument V. */
         v_ref = yget_ref(iarg);
       } else {
@@ -1821,6 +1825,9 @@ void Y_lpk_eigen(int argc)
   if (positional_args < 1) {
     y_error("too few arguments");
   }
+  uplo[0] = (lower ? 'L' : 'U');
+  uplo[1] = '\0';
+
 
   /* The routine will push 2 items on top of the stack: the array W to store
      eigenvalues and a workspace. (This is less than 8 items, so there are no
@@ -1933,7 +1940,7 @@ void Y_lpk_eigen(int argc)
   }
   yarg_drop(1); /* drop workspace */
   if (v_ref >= 0L) {
-    yput_global(v_ref, 1);
+    yput_global(v_ref, a_iarg + 1);
   }
 }
 
