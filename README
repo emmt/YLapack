@@ -11,8 +11,8 @@ The reasons for this interface are multiples:
  1. Yorick only provides general matrix inversion and resolution of linear
     systems of equations (LUsolve), resolution of tridiagonal systems of
     equations (TDsolve), solving linear least squares (QRsolve or SVsolve) and
-    singular value deconposition (SVdec).  Lapack gives many more: eigen
-    values and eigen vectors, symmetric matrices, etc.
+    singular value deconposition (SVdec).  Lapack gives many more: eigenvalues
+    and eigenvectors, symmetric matrices, etc.
 
  2. There are a number of faster implementations of BLAS and LAPACK than the
     one built into Yorick (an automatic Fortran to C conversion by a smart
