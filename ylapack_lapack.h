@@ -1302,8 +1302,8 @@ PROTOTYPE(CHESV, float);
 PROTOTYPE(ZHESV, double);
 #undef PROTOTYPE
 
-/* _SYEV -- computes the eigenvalues and eigenvectors of a symmetric or
- *          hermitian matrix. */
+/* _SYEV/_HEEV -- computes the eigenvalues and eigenvectors of a symmetric or
+ *                hermitian matrix. */
 #define PROTOTYPE(NAME,REAL)                            \
   extern int NAME(CONST CHARACTER *JOBZ,                \
                   CONST CHARACTER *UPLO,                \
@@ -1328,9 +1328,9 @@ PROTOTYPE(CHEEV, float);
 PROTOTYPE(ZHEEV, double);
 #undef PROTOTYPE
 
-/* _SYEVD -- computes the eigenvalues and eigenvectors of a symmetric or
- *           hermitian matrix, using a divide and conquer algorithm for the
- *           eigenvectors. */
+/* _SYEVD/_HEEVD -- computes the eigenvalues and eigenvectors of a symmetric
+ *                  or hermitian matrix, using a divide and conquer algorithm
+ *                  for the eigenvectors. */
 #define PROTOTYPE(NAME,REAL)                                    \
   extern int NAME(CONST CHARACTER *JOBZ,                        \
                   CONST CHARACTER *UPLO,                        \
@@ -1388,7 +1388,7 @@ PROTOTYPE(CGESVD, float);
 PROTOTYPE(ZGESVD, double);
 #undef PROTOTYPE
 
-/* _GESDD -- computes the singular value decomposition (SVD) by 
+/* _GESDD -- computes the singular value decomposition (SVD) by
  *           a divide-and-conquer algorithm. */
 #define PROTOTYPE(NAME,REAL)                           \
   extern int NAME(CONST CHARACTER *JOBZ,               \
