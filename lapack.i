@@ -735,6 +735,33 @@ extern lpk_ggsvd;
  */
 
 /*---------------------------------------------------------------------------*/
+/* FIT-DICT */
+
+extern lpk_fit_dict;
+/* DOCUMENT: unbias_coef = lpk_fit_dict(data, dict, coef, row, col, threshold);
+  
+   This routine fits the DATA samples (as a ATOM_SIZE-by-DATA_SIZE array) on
+   a dictionary DICT (as an ATOM_SIZE-by-DICT_SIZE array) given a
+   list COEF of significant coefficients (as a DICT_SIZE-by-DATA_SIZE sparse
+   matrix).
+  
+   COEF = the SPARSE_SIZE values of the sparse matrix coefficients
+   ROW  = the SPARSE_SIZE row indexes --> atom index
+   COL  = the SPARSE_SIZE column indexes of the coefficients --> data index
+  
+    COEFS(l) = A(ROWS(l),COLS(l))
+  
+   ATOM_SIZE = number of values in an atom (a patch)
+   DICT_SIZE = number of atoms in the dictionary
+   DATA_SIZE = number of atoms to fit
+   SPARSE_SIZE = number of sparse coefficients
+  
+   The result is a list of unbiased coefficients.
+   
+   
+ */
+
+/*---------------------------------------------------------------------------*/
 /* INITIALIZATION */
 
 extern lpk_init;

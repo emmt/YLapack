@@ -2934,6 +2934,266 @@ static void coerce_matrix(matrix_t *mat, int type)
   mat->arr.type = type;
 }
 
+/*---------------------------------------------------------------------------*/
+/* FIT-DICT */
+
+#define PUSH_SCRATCH(type, number) \
+  ((type *)ypush_scratch((number)*sizeof(type), NULL))
+
+/* Notations:
+ *   i = value index in an atom (0 <= i < ATOM_SIZE)
+ *   j = atom index in the full dictionary (0 <= j < DICT_SIZE)
+ *   k = atom index in the sub-dictionary (0 <= k < SUB_DICT_SIZE)
+ *   l = index in the sparse matrix of significant coefficients
+ *       (0 <= l < SPARSE_SIZE)
+ *   s = sample index in the data array (0 <= s < DATA_SIZE)
+ */ 
+
+/* Macros to access multi-dimensional arrays (for LAPACK, matrices are stored
+   in column-major order): */
+#define A(k1,k2)      a[sub_dict_size*(k2) + (k1)]
+#define FULL_A(j1,j2) full_a[dict_size*(j2) + (j1)]
+#define DICT(i,j)     dict[atom_size*(j) + (i)]
+#define DATA(i,s)     data[atom_size*(s) + (i)]
+#define DICT_ELEM(j)  (&DICT(0,j))
+#define DATA_ELEM(s)  (&DATA(0,s))
+
+/* Macro to compute the dot product between atoms. */
+#define DOT(a1,a2)    simple_ddot(atom_size, a1, a2)
+ 
+
+static double simple_ddot(long n, const double x[], const double y[])
+{
+  INTEGER np = n, incx = 1, incy = 1;
+  return DDOT(&np, x, &incx, y, &incy);
+}
+
+void Y_fit_dict(int argc)
+{
+  const double ZERO = 0.0;
+  double threshold;
+  long dims[Y_DIMSIZE];
+  const long *sparse_row, *sparse_col;
+  long *index;
+  int *select;
+  double *a, *b, *full_a, *full_b, *result;
+  const double *data, *dict, *sparse_coef;
+  typedef struct _chain_item chain_item_t;
+  struct _chain_item {
+    long j; /* index in dictionary */
+    long l; /* index in sparse array */
+    chain_item_t *next; /* next item */
+  };
+  chain_item_t **chain, *pool, *item;
+  long atom_size, dict_size, data_size, sparse_size, sub_dict_size, ntot;
+  long j, k, l, s, j1, j2, k1, k2;
+  int iarg;
+
+  /* Parse arguments. */
+  iarg = argc;
+
+  /* Get DATA. */
+  if (--iarg < 0) goto bad_nargs;
+  if (yarg_typeid(iarg) > Y_DOUBLE || yarg_rank(iarg) != 2) {
+    y_error("expecting an ATOM_SIZE-by-DATA_SIZE array of reals for DATA");
+  }
+  data = ygeta_d(iarg, NULL, dims);
+  atom_size = dims[1];
+  data_size = dims[2];
+  
+  /* Get DICT. */
+  if (--iarg < 0) goto bad_nargs;
+  if (yarg_typeid(iarg) > Y_DOUBLE || yarg_rank(iarg) != 2) {
+  bad_dict_arg:
+    y_error("expecting an ATOM_SIZE-by-DICT_SIZE array of reals for DICT");
+  }
+  dict = ygeta_d(iarg, NULL, dims);
+  if (dims[1] != atom_size) goto bad_dict_arg;
+  dict_size = dims[2];
+  
+  /* Get COEF. */
+  if (--iarg < 0) goto bad_nargs;
+  if (yarg_typeid(iarg) > Y_DOUBLE || yarg_rank(iarg) != 1) {
+    y_error("expecting a vector of reals for COEF");
+  }
+  sparse_coef = ygeta_d(iarg, &sparse_size, NULL);
+  
+  /* Get ROW. */
+  if (--iarg < 0) goto bad_nargs;
+  if (yarg_typeid(iarg) > Y_LONG || yarg_rank(iarg) != 1) {
+  bad_row_arg:
+    y_error("expecting a vector of numberof(COEF) integers for ROW");
+  }
+  sparse_row = ygeta_l(iarg, &ntot, NULL);
+  if (ntot != sparse_size) goto bad_row_arg;
+    
+  /* Get COL. */
+  if (--iarg < 0) goto bad_nargs;
+  if (yarg_typeid(iarg) > Y_LONG || yarg_rank(iarg) != 1) {
+  bad_col_arg:
+    y_error("expecting a vector of numberof(COEF) integers for COL");
+  }
+  sparse_col = ygeta_l(iarg, &ntot, NULL);
+  if (ntot != sparse_size) goto bad_col_arg;
+  
+  /* Get THRESHOLD. */
+  if (--iarg < 0) goto bad_nargs;
+  threshold = ygets_d(iarg);
+  
+
+
+  /* Allocate and initialize workspaces.  (The routine will push 6 items on
+     top of the stack.  This is less than 8 items, so there are no needs to
+     call ypush_check in principle.) */
+  ypush_check(6);
+
+  /* Allocate a single workspace for:
+   *   FULL_A =  DICT_SIZE*DICT_SIZE;
+   *   FULL_B =  DICT_SIZE;
+   *   A <= DICT_SIZE*DICT_SIZE;
+   *   B <= DICT_SIZE
+   * FIXME: in fact FULL_B can overlap with A (they are not used at
+   * the same time)
+   */
+  full_a = PUSH_SCRATCH(double, 2*dict_size*dict_size + 2*dict_size);
+  full_b = full_a + dict_size*dict_size;
+  a = full_b + dict_size;
+  b = a + dict_size*dict_size;
+
+  /* Precompute the the upper triangle part of left-hand-side matrix for all
+     atoms of the dictionary.  FIXME: only store the upper triangle part. */
+  for (j2 = 0; j2 < dict_size; ++j2) {
+    for (j1 = 0; j1 <= j2; ++j1) {
+      FULL_A(j1,j2) = DOT(DICT_ELEM(j1), DICT_ELEM(j2));
+    }
+  }
+
+  /* Build the list of significant dictionary atoms for each data sample. */
+  chain = PUSH_SCRATCH(chain_item_t *, data_size);
+  pool = PUSH_SCRATCH(chain_item_t, sparse_size);
+  for (s = 0; s < data_size; ++s) {
+    chain[s] = NULL;
+  }
+  for (item = pool, l = 0; l < sparse_size; ++l) {
+    if (sparse_coef[l] > threshold
+        && (j = sparse_row[l] - 1) >= 0 && j < dict_size
+        && (s = sparse_col[l] - 1) >= 0 && s < data_size) {
+      /* Insert significant coefficient in list. */
+      item->j = j;
+      item->l = l;
+      item->next = chain[s];
+      chain[s] = item;
+      ++item;
+    }
+  }
+
+  /* Create a vector to mark which atoms are selected for a given data
+     sample. */
+  select = PUSH_SCRATCH(int, dict_size);
+  for (j = 0; j < dict_size; ++j) {
+    select[j] = FALSE;
+  }
+
+  /* Push temporary array for indirection table between
+       sub-dictionary and in full dictionary. */
+  index = PUSH_SCRATCH(long, dict_size);
+
+  /* Finally push the result on top of the stack. */
+  dims[0] = 1;
+  dims[1] = sparse_size;
+  result = ypush_d(dims);
+  for (l = 0; l < sparse_size; ++l) {
+    result[l] = ZERO;
+  }
+
+  /* Loop over data samples. */
+  for (s = 0; s < data_size; ++s) {
+    /* Mark significant atoms for this data sample. */
+    item = chain[s];
+    if (item == NULL) {
+      /* Skip sample with no significant atoms. */
+      continue;
+    }
+    do {
+      select[item->j] = TRUE;
+      item = item->next;
+    } while (item != NULL);
+
+    /* Count number of significant atoms and make indirection table between
+       sub-dictionary and in full dictionary. */
+    for (k = 0, j = 0; j < dict_size; ++j) {
+      if (select[j]) {
+        index[k++] = j;
+        select[j] = FALSE; /* clear selection flag for next data sample */
+      }
+    }
+    sub_dict_size = k;
+      
+    /* Extract sub-LHS matrix A and compute RHS vector B. */
+    for (k2 = 0; k2 < sub_dict_size; ++k2) {
+      j2 = index[k2];
+      for (k1 = 0; k1 <= k2; ++k1) {
+        j1 = index[k1];
+        A(k1,k2) = FULL_A(j1,j2);
+      }
+    }
+    for (k = 0; k < sub_dict_size; ++k) {
+      j = index[k];
+      b[k] = DOT(DICT_ELEM(j), DATA_ELEM(s));
+    }
+
+    /* Solve the normal equations. */
+    {
+      CHARACTER uplo[2];
+      INTEGER info, n = sub_dict_size, lda = n, ldb = n, nrhs = 1;
+      uplo[0] = 'U';
+      uplo[1] = '\0';
+      (void)DPOSV(uplo, &n, &nrhs, a, &lda, b, &ldb, &info);
+      if (info == 0) {
+        /* Solving the normal equations was successful.  Store the
+           solution. */
+        for (j = 0; j < dict_size; ++j) {
+          full_b[j] = ZERO;
+        }
+        for (k = 0; k < sub_dict_size; ++k) {
+          j = index[k];
+          full_b[j] = b[k];
+        }
+        item = chain[s];
+        do {
+          result[item->l] = full_b[item->j];
+          item = item->next;
+        } while (item != NULL);
+      } else {
+        /* Solving the normal equations failed. */
+        if (info < 0) {
+          swrite(msgbuf, "bug: illegal argument %d in calling DPOSV",
+                 -(int)info);
+        } else {
+          swrite(msgbuf,
+                 "the leading minor of order %d of A is not positive definite",
+                 (int)info);
+        }
+        y_error(msgbuf);
+      } 
+    }
+  }
+
+  return;
+
+ bad_nargs:
+  y_error("bad number of arguments");
+
+}
+
+#undef A
+#undef A_FULL
+#undef DICT
+#undef DATA
+#undef DOT
+
+
+
 /*
  * Local Variables:
  * mode: C
