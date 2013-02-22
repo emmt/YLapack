@@ -875,7 +875,7 @@ void Y_lpk_dot(int argc)
   if (type == Y_DOUBLE) {
     ypush_double(CALL_DDOT(n,x,y));
   } else if (type == Y_FLOAT) {
-    *ypush_f(NULL) = CALL_DDOT(n,x,y);
+    *ypush_f(NULL) = CALL_SDOT(n,x,y);
   } else {
     double *result = ypush_z(NULL);
     CALL_ZDOTC(result, n, x, y);
@@ -2959,16 +2959,18 @@ static void coerce_matrix(matrix_t *mat, int type)
 #define DATA_ELEM(s)  (&DATA(0,s))
 
 /* Macro to compute the dot product between atoms. */
-#define DOT(a1,a2)    simple_ddot(atom_size, a1, a2)
- 
-
-static double simple_ddot(long n, const double x[], const double y[])
+#ifdef USE_CBLAS
+# define DOT(a1,a2)    cblas_ddot(atom_size, a1, 1, a2, 1)
+#else
+# define DOT(a1,a2)    simple_ddot(atom_size, a1, a2)
+ static double simple_ddot(long n, const double x[], const double y[])
 {
   INTEGER np = n, incx = 1, incy = 1;
   return DDOT(&np, x, &incx, y, &incy);
 }
+#endif
 
-void Y_fit_dict(int argc)
+void Y_lpk_fit_dict(int argc)
 {
   const double ZERO = 0.0;
   double threshold;
