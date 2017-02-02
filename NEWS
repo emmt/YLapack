@@ -1,2 +1,0 @@
-* 20/12/2012 - wrapper for GGSVD to computes the generalized singular value
-               decomposition (GSVD) of general matrices.
