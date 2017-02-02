@@ -736,13 +736,3 @@ void cblas_xerbla(CBLAS_INTEGER p, const char *rout, const char *form, ...);
 _CBLAS_END_DECLS
 
 #endif /* _CBLAS_H */
-
-/*
- * Local Variables:
- * mode: C
- * tab-width: 8
- * c-basic-offset: 2
- * fill-column: 78
- * coding: utf-8
- * End:
- */

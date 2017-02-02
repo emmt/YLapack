@@ -623,7 +623,7 @@ extern lpk_eigen;
      in Yorick notation:
 
         A = (Z*W(-,))(,+)*Z(,+) = Z(,+)*(W(-,)*Z)(,+)
-     
+
      Keyword LOWER can be set true to indicate that the lower triangular part
      of the matrix A has been initialized (the upper part is not used).  The
      default is to assume that the upper triangular part has been initialized
@@ -632,7 +632,7 @@ extern lpk_eigen;
      Keyword SLOW can be set true to not use the faster divide-and-conquer
      algorithm to compute the eigenvectors.
 
-     LPK_EIGEN uses LAPACK routines (S/D)SYEV, (S/D)SYEVD, ZHEEV and ZHEEVD. 
+     LPK_EIGEN uses LAPACK routines (S/D)SYEV, (S/D)SYEVD, ZHEEV and ZHEEVD.
 
 
    SEE ALSO: SVdec, lpk_gesvd, lpk_ggsvd.
@@ -739,26 +739,26 @@ extern lpk_ggsvd;
 
 extern lpk_fit_dict;
 /* DOCUMENT: unbias_coef = lpk_fit_dict(data, dict, coef, row, col, threshold);
-  
+
    This routine fits the DATA samples (as a ATOM_SIZE-by-DATA_SIZE array) on
    a dictionary DICT (as an ATOM_SIZE-by-DICT_SIZE array) given a
    list COEF of significant coefficients (as a DICT_SIZE-by-DATA_SIZE sparse
    matrix).
-  
+
    COEF = the SPARSE_SIZE values of the sparse matrix coefficients
    ROW  = the SPARSE_SIZE row indexes --> atom index
    COL  = the SPARSE_SIZE column indexes of the coefficients --> data index
-  
+
     COEFS(l) = A(ROWS(l),COLS(l))
-  
+
    ATOM_SIZE = number of values in an atom (a patch)
    DICT_SIZE = number of atoms in the dictionary
    DATA_SIZE = number of atoms to fit
    SPARSE_SIZE = number of sparse coefficients
-  
+
    The result is a list of unbiased coefficients.
-   
-   
+
+
  */
 
 /*---------------------------------------------------------------------------*/
@@ -770,14 +770,3 @@ extern lpk_init;
      and verify assumptions made in the code.
  */
 lpk_init;
-
-/*
- * Local Variables:
- * mode: Yorick
- * tab-width: 8
- * c-basic-offset: 2
- * indent-tabs-mode: nil
- * fill-column: 78
- * coding: utf-8
- * End:
- */

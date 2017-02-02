@@ -1,4 +1,4 @@
-/* 
+/*
  * ylapack_blas.h --
  *
  * Definitions for BLAS functions.
@@ -834,13 +834,3 @@ extern VOID   ZTRSM(CONST CHARACTER *side, CONST CHARACTER *uplo,
                     CONST INTEGER *lda, COMPLEX16_PTR b, CONST INTEGER *ldb);
 
 _YLPK_END_DECLS
-
-/* 
- * Local Variables:
- * mode: C
- * tab-width: 8
- * c-basic-offset: 2
- * fill-column: 78
- * coding: utf-8
- * End:
- */

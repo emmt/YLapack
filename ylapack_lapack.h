@@ -1452,13 +1452,3 @@ PROTOTYPE(ZGGSVD, double);
 #undef PROTOTYPE
 
 _YLPK_END_DECLS
-
-/*
- * Local Variables:
- * mode: C
- * tab-width: 8
- * c-basic-offset: 2
- * fill-column: 78
- * coding: utf-8
- * End:
- */

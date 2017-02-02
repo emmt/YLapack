@@ -1833,7 +1833,7 @@ void Y_lpk_eigen(int argc)
      eigenvalues and a workspace. (This is less than 8 items, so there are no
      needs to call ypush_check in principle.) */
   ypush_check(2);
-  
+
   /* Create W on top of the stack. */
   w = push_1d((type == Y_FLOAT ? Y_FLOAT : Y_DOUBLE), n);
 
@@ -2028,7 +2028,7 @@ static void gesvd(int argc, int divide_and_conquer)
      workspace. (This is less than 8 items, so there are no needs to call
      ypush_check in principle.) */
   ypush_check(4);
-  
+
   /* Create S, U and VT on top of the stack.  FIXME: use A to save storage. */
   s = push_1d((type == Y_FLOAT ? Y_FLOAT : Y_DOUBLE), MIN(m, n));
   if (u_ref >= 0L || (divide_and_conquer && vt_ref >= 0L)) {
@@ -2947,7 +2947,7 @@ static void coerce_matrix(matrix_t *mat, int type)
  *   l = index in the sparse matrix of significant coefficients
  *       (0 <= l < SPARSE_SIZE)
  *   s = sample index in the data array (0 <= s < DATA_SIZE)
- */ 
+ */
 
 /* Macros to access multi-dimensional arrays (for LAPACK, matrices are stored
    in column-major order): */
@@ -3002,7 +3002,7 @@ void Y_lpk_fit_dict(int argc)
   data = ygeta_d(iarg, NULL, dims);
   atom_size = dims[1];
   data_size = dims[2];
-  
+
   /* Get DICT. */
   if (--iarg < 0) goto bad_nargs;
   if (yarg_typeid(iarg) > Y_DOUBLE || yarg_rank(iarg) != 2) {
@@ -3012,14 +3012,14 @@ void Y_lpk_fit_dict(int argc)
   dict = ygeta_d(iarg, NULL, dims);
   if (dims[1] != atom_size) goto bad_dict_arg;
   dict_size = dims[2];
-  
+
   /* Get COEF. */
   if (--iarg < 0) goto bad_nargs;
   if (yarg_typeid(iarg) > Y_DOUBLE || yarg_rank(iarg) != 1) {
     y_error("expecting a vector of reals for COEF");
   }
   sparse_coef = ygeta_d(iarg, &sparse_size, NULL);
-  
+
   /* Get ROW. */
   if (--iarg < 0) goto bad_nargs;
   if (yarg_typeid(iarg) > Y_LONG || yarg_rank(iarg) != 1) {
@@ -3028,7 +3028,7 @@ void Y_lpk_fit_dict(int argc)
   }
   sparse_row = ygeta_l(iarg, &ntot, NULL);
   if (ntot != sparse_size) goto bad_row_arg;
-    
+
   /* Get COL. */
   if (--iarg < 0) goto bad_nargs;
   if (yarg_typeid(iarg) > Y_LONG || yarg_rank(iarg) != 1) {
@@ -3037,11 +3037,11 @@ void Y_lpk_fit_dict(int argc)
   }
   sparse_col = ygeta_l(iarg, &ntot, NULL);
   if (ntot != sparse_size) goto bad_col_arg;
-  
+
   /* Get THRESHOLD. */
   if (--iarg < 0) goto bad_nargs;
   threshold = ygets_d(iarg);
-  
+
 
 
   /* Allocate and initialize workspaces.  (The routine will push 6 items on
@@ -3130,7 +3130,7 @@ void Y_lpk_fit_dict(int argc)
       }
     }
     sub_dict_size = k;
-      
+
     /* Extract sub-LHS matrix A and compute RHS vector B. */
     for (k2 = 0; k2 < sub_dict_size; ++k2) {
       j2 = index[k2];
@@ -3177,7 +3177,7 @@ void Y_lpk_fit_dict(int argc)
                  (int)info);
         }
         y_error(msgbuf);
-      } 
+      }
     }
   }
 
@@ -3193,15 +3193,3 @@ void Y_lpk_fit_dict(int argc)
 #undef DICT
 #undef DATA
 #undef DOT
-
-
-
-/*
- * Local Variables:
- * mode: C
- * tab-width: 8
- * c-basic-offset: 2
- * fill-column: 78
- * coding: utf-8
- * End:
- */

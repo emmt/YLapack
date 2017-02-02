@@ -173,13 +173,3 @@ typedef struct _ylpk_complex16 ylpk_complex16;
 
 
 #endif /* _YLAPACK_H */
-
-/*
- * Local Variables:
- * mode: C
- * tab-width: 8
- * c-basic-offset: 2
- * fill-column: 78
- * coding: utf-8
- * End:
- */
