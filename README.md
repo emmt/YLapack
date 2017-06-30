@@ -106,26 +106,28 @@ Note that to successfully compile for multiple architectures the
 GotoBLAS2-1.13_bsd version, I had to patch the file `driver/others/dynamic.c`,
 the differences are:
 
->  71c71
->  < static int get_vendor(void){
->  ---
->  > static int get_vendor(void) {
->  77,79c77,79
->  <   *(int *)(&vendor[0]) = ebx;
->  <   *(int *)(&vendor[4]) = edx;
->  <   *(int *)(&vendor[8]) = ecx;
->  ---
->  >   memcpy(&vendor[0], &ebx, 4);
->  >   memcpy(&vendor[4], &edx, 4);
->  >   memcpy(&vendor[8], &ecx, 4);
->  201c201
->  <   if (gotoblas == NULL) gotoblas = gotoblas_KATMAI;
->  ---
->  >   if (gotoblas == NULL) gotoblas = &gotoblas_KATMAI;
->  203c203
->  <   if (gotoblas == NULL) gotoblas = gotoblas_PRESCOTT;
->  ---
->  >   if (gotoblas == NULL) gotoblas = &gotoblas_PRESCOTT;
+```
+71c71
+< static int get_vendor(void){
+---
+> static int get_vendor(void) {
+77,79c77,79
+<   *(int *)(&vendor[0]) = ebx;
+<   *(int *)(&vendor[4]) = edx;
+<   *(int *)(&vendor[8]) = ecx;
+---
+>   memcpy(&vendor[0], &ebx, 4);
+>   memcpy(&vendor[4], &edx, 4);
+>   memcpy(&vendor[8], &ecx, 4);
+201c201
+<   if (gotoblas == NULL) gotoblas = gotoblas_KATMAI;
+---
+>   if (gotoblas == NULL) gotoblas = &gotoblas_KATMAI;
+203c203
+<   if (gotoblas == NULL) gotoblas = gotoblas_PRESCOTT;
+---
+>   if (gotoblas == NULL) gotoblas = &gotoblas_PRESCOTT;
+```
 
 These have been fixed in SurviveGotoBLAS2 which has the advantage of taking
 into account newest LAPACK version (3.3.1 as of writing) while
@@ -168,55 +170,60 @@ multi-threading; the speed-up w.r.t. Yorick is given between the square
 brackets).
 
 ### Scalar product
-> -----------------------------------------------------------------------
->              Yorick            GotoBlas2              MKL
->    size     sum(x*y)           lpk_dot              lpk_dot
->                           (µs = microseconds)
-> -----------------------------------------------------------------------
->    10,000    21 µs (100%)   5.4 µs (100%) [4.0]     6.7 µs (396%) [3.1]
->   100,000   220 µs (100%)    55 µs (100%) [4.1]      46 µs (393%) [4.8]
-> 1,000,000  3700 µs (100%)  1200 µs (100%) [3.1]     948 µs (398%) [3.9]
->   1024^2   4000 µs (100%)  1300 µs (100%) [3.1]    1000 µs (399%) [4.0]
-> -----------------------------------------------------------------------
+```
+-----------------------------------------------------------------------
+             Yorick            GotoBlas2              MKL
+   size     sum(x*y)           lpk_dot              lpk_dot
+                          (µs = microseconds)
+-----------------------------------------------------------------------
+   10,000    21 µs (100%)   5.4 µs (100%) [4.0]     6.7 µs (396%) [3.1]
+  100,000   220 µs (100%)    55 µs (100%) [4.1]      46 µs (393%) [4.8]
+1,000,000  3700 µs (100%)  1200 µs (100%) [3.1]     948 µs (398%) [3.9]
+  1024^2   4000 µs (100%)  1300 µs (100%) [3.1]    1000 µs (399%) [4.0]
+-----------------------------------------------------------------------
+```
 For this BLAS level 1 operation, GotoBlas2 is not multi-threaded.
 MKL is the fastest (for vectors of size > 100,000).  MKL and GotoBlas2
 provide speed-up between 3 and 5.
 
 
 ### Resolution of a linear system of equations
-> ----------------------------------------------------------------------
->             Yorick            GotoBlas2              MKL
->  size      LUsolve            lpk_gesv             lpk_gesv
-> ----------------------------------------------------------------------
->    100  0.39 ms  (99%)   0.25 ms (189%)  [1.6]   0.22 ms (392%)  [1.7]
->    500    39 ms  (99%)     10 ms (212%)  [3.9]    6.1 ms (397%)  [6.3]
->  1,000   0.30 s (100%)   0.066 s (338%)  [4.5]   0.038 s (397%)  [8.1]
->  2,000    2.3 s (100%)    0.27 s (355%)  [8.6]    0.27 s (398%)  [8.6]
->  3,000    8.0 s (100%)    0.86 s (355%)  [9.4]    0.91 s (387%)  [8.9]
->  5,000     38 s (100%)     3.8 s (367%) [10.1]     4.0 s (392%)  [9.6]
-> 10,000    303 s (100%)      30 s (379%) [10.2]      28 s (392%) [11.1]
-> --------------------------------------------------------------------
+```
+----------------------------------------------------------------------
+            Yorick            GotoBlas2              MKL
+ size      LUsolve            lpk_gesv             lpk_gesv
+----------------------------------------------------------------------
+   100  0.39 ms  (99%)   0.25 ms (189%)  [1.6]   0.22 ms (392%)  [1.7]
+   500    39 ms  (99%)     10 ms (212%)  [3.9]    6.1 ms (397%)  [6.3]
+ 1,000   0.30 s (100%)   0.066 s (338%)  [4.5]   0.038 s (397%)  [8.1]
+ 2,000    2.3 s (100%)    0.27 s (355%)  [8.6]    0.27 s (398%)  [8.6]
+ 3,000    8.0 s (100%)    0.86 s (355%)  [9.4]    0.91 s (387%)  [8.9]
+ 5,000     38 s (100%)     3.8 s (367%) [10.1]     4.0 s (392%)  [9.6]
+10,000    303 s (100%)      30 s (379%) [10.2]      28 s (392%) [11.1]
+----------------------------------------------------------------------
+```
 Hence for moderate size matrix MKL is the fastest but for very large
 matrices GotoBlas2 and MKL have similar speed-up of ~ 10.
 
 ### Tests with GotoBLAS2 on Linux with CPU Intel Core i7-2600 @ 3.40GHz
-> ---------------------------------------------------------------------
->                    Yorick                  Lapack
->   size             LUsolve                lpk_gesv
-> ---------------------------------------------------------------------
->      50  3.53E-05 +/- 6E-06 ( 96%)   2.99E-05 +/- 4E-05 (139%)  [1.2]
->     100  2.41E-04 +/- 1E-05 (100%)   9.75E-05 +/- 5E-06 (156%)  [2.5]
->     200  1.76E-03 +/- 3E-05 ( 99%)   4.37E-04 +/- 2E-05 (178%)  [4.0]
->     300  5.51E-03 +/- 8E-05 ( 99%)   1.12E-03 +/- 2E-04 (204%)  [4.9]
->     500  2.41E-02 +/- 4E-04 (100%)   4.30E-03 +/- 1E-04 (216%)  [5.6]
->   1,000  1.90E-01 +/- 9E-04 (100%)   2.12E-02 +/- 4E-04 (305%)  [9.0]
->   2,000  1.47E+00 +/- 1E-03 (100%)   1.33E-01 +/- 2E-03 (358%) [11.0]
->   3,000  5.01E+00 +/- 4E-03 ( 99%)   4.34E-01 +/- 5E-03 (353%) [11.5]
->   5,000  2.32E+01 +/- 1E-02 ( 99%)   1.83E+00 +/- 3E-03 (369%) [12.7]
->  10,000  1.84E+02 +/- 6E-02 (100%)   1.36E+01 +/- 7E-02 (382%) [13.5]
->  20,000  1.76E+03 +/- 1E+01 ( 99%)   1.04E+02 +/- 8E-02 (390%) [17.0]
-> ---------------------------------------------------------------------
-
+```
+---------------------------------------------------------------------
+                  Yorick                  Lapack
+ size             LUsolve                lpk_gesv
+---------------------------------------------------------------------
+     50  3.53E-05 +/- 6E-06 ( 96%)   2.99E-05 +/- 4E-05 (139%)  [1.2]
+    100  2.41E-04 +/- 1E-05 (100%)   9.75E-05 +/- 5E-06 (156%)  [2.5]
+    200  1.76E-03 +/- 3E-05 ( 99%)   4.37E-04 +/- 2E-05 (178%)  [4.0]
+    300  5.51E-03 +/- 8E-05 ( 99%)   1.12E-03 +/- 2E-04 (204%)  [4.9]
+    500  2.41E-02 +/- 4E-04 (100%)   4.30E-03 +/- 1E-04 (216%)  [5.6]
+  1,000  1.90E-01 +/- 9E-04 (100%)   2.12E-02 +/- 4E-04 (305%)  [9.0]
+  2,000  1.47E+00 +/- 1E-03 (100%)   1.33E-01 +/- 2E-03 (358%) [11.0]
+  3,000  5.01E+00 +/- 4E-03 ( 99%)   4.34E-01 +/- 5E-03 (353%) [11.5]
+  5,000  2.32E+01 +/- 1E-02 ( 99%)   1.83E+00 +/- 3E-03 (369%) [12.7]
+ 10,000  1.84E+02 +/- 6E-02 (100%)   1.36E+01 +/- 7E-02 (382%) [13.5]
+ 20,000  1.76E+03 +/- 1E+01 ( 99%)   1.04E+02 +/- 8E-02 (390%) [17.0]
+---------------------------------------------------------------------
+```
 Note: I have tested Yorick built-in LUsolve (compiled with GCC 4.5.2)
 versus DGESV in Lapack 3.3.1 (compiled with Intel ifort XE 2011 SP1.6.233)
 and noticed a speed-up of ~ 1.5 for DGESV.
@@ -226,17 +233,17 @@ and noticed a speed-up of ~ 1.5 for DGESV.
 
 Perform Cholesky factorization (DPOTRF) and solve a linear system with a
 positive definite symmetric left hand side matrix with GotoBLAS2.
-
-> ----------------------------------------------------------------
->          Size                    laptop           server
-> ----------------------------------------------------------------
-> DPOTRF  5,000x5,000      2.2 sec (320%)     1.3 sec (330%)
-> DPOTRF 10,000x10,000      (not done)       10.5 sec (320%)
-> DPOTRF 12,000x12,000     23 sec (387%)     15.6 sec (368%)
-> ----------------------------------------------------------------
-> DPOTRS 5,000x5,000      0.2 sec
-> ----------------------------------------------------------------
-
+```
+----------------------------------------------------------------
+         Size                    laptop           server
+----------------------------------------------------------------
+DPOTRF  5,000x5,000      2.2 sec (320%)     1.3 sec (330%)
+DPOTRF 10,000x10,000      (not done)       10.5 sec (320%)
+DPOTRF 12,000x12,000     23 sec (387%)     15.6 sec (368%)
+----------------------------------------------------------------
+DPOTRS 5,000x5,000      0.2 sec
+----------------------------------------------------------------
+```
 * laptop = Linux laptop with Intel Core i7 Q820 at 1.73GHz
 * server = Linux server with Intel Xeon X3450 at 2.67Ghz
 * dpotrf = Cholesky decomposition (done once for a given C)
