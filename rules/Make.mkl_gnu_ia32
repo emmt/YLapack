@@ -1,7 +1,0 @@
-# Rules to use MKL for ia32 processor and with GNU compiler:
-MKL_DIR = /opt/intel/mkl
-MKL_ARCH = ia32
-MKL_DEFS =
-MKL_INTERFACE = mkl_gf
-MKL_THREAD = mkl_gnu_thread
-include $(srcdir)/rules/Make.mkl

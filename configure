@@ -12,10 +12,11 @@
 
 # The following default values are specific to the package.  They can be
 # overwritten by options on the command line.
-cfg_cflags=
-cfg_deplibs="-llapack -lblas"
-cfg_ldflags=
-cfg_model=
+cfg_pkg_cflags=
+cfg_pkg_deplibs="-llapack -lblas"
+cfg_pkg_ldflags=
+cfg_interface=
+cfg_link="dynamic"
 
 # The other values are pretty general.
 cfg_tmpdir=.
@@ -68,16 +69,18 @@ cfg_help () {
     cat <<EOF
 usage: $cfg_progname [-h|--help] [--yorick=PATH_TO_YORICK]
 options:
-  --arch=OS-CPU        Architecture [$cfg_arch].
-  --yorick=PATH        Path to Yorick executable [$cfg_yorick].
-  --model=MODEL        Target model [$cfg_model].
-  --cflags=CFLAGS      Additional compiler flags [$cfg_cflags], for instance:
-                         --cflags='-Isomedir'
-  --deplibs=DEPLIBS    Flags for dependencies [$cfg_deplibs], for instance:
-                         --deplibs='-Lsomedir -lsomelib'
-  --ldflags=LDFLAGS    Additional linker flags [$cfg_ldflags].
-  --debug              Turn debug mode on (for this script).
-  -h, --help           Print this help and exit.
+  --arch=OS-CPU           Architecture [$cfg_arch].
+  --interface=INTERFACE   Library interface (override options --cflags, --deplibs and
+                          --ldflags) [$cfg_interface].
+  --cflags=CFLAGS         Additional compiler flags [$cfg_pkg_cflags], for instance:
+                              --cflags='-Isomedir'
+  --deplibs=DEPLIBS       Flags for dependencies [$cfg_pkg_deplibs], for instance:
+                              --deplibs='-Lsomedir -lsomelib'
+  --ldflags=LDFLAGS       Additional linker flags [$cfg_pkg_ldflags].
+  --static, --dynamic     Link with static/dynamic library [$cfg_link].
+  --yorick=PATH           Path to Yorick executable [$cfg_yorick].
+  --debug                 Turn debug mode on (for this script).
+  -h, --help              Print this help and exit.
 EOF
 }
 
@@ -111,20 +114,26 @@ while test $# -ge 1; do
         --debug)
             cfg_debug=yes
             ;;
+        --static)
+            cfg_link=static
+            ;;
+        --dynamic)
+            cfg_link=dynamic
+            ;;
         --arch=*)
             cfg_arch=$(cfg_opt_value "$cfg_arg")
             ;;
         --cflags=*)
-            cfg_cflags=$(cfg_opt_value "$cfg_arg")
+            cfg_pkg_cflags=$(cfg_opt_value "$cfg_arg")
             ;;
         --deplibs=*)
-            cfg_deplibs=$(cfg_opt_value "$cfg_arg")
+            cfg_pkg_deplibs=$(cfg_opt_value "$cfg_arg")
             ;;
         --ldflags=*)
-            cfg_ldflags=$(cfg_opt_value "$cfg_arg")
+            cfg_pkg_ldflags=$(cfg_opt_value "$cfg_arg")
             ;;
-        --model=*)
-            cfg_model=$(cfg_opt_value "$cfg_arg")
+        --interface=*)
+            cfg_interface=$(cfg_opt_value "$cfg_arg")
             ;;
         --yorick=*)
             cfg_yorick=$(cfg_opt_value "$cfg_arg")
@@ -177,6 +186,105 @@ cfg_ymkdir=$cfg_yhome
 echo >&2 "Yorick home directory ----> $cfg_yhome"
 echo >&2 "Yorick site directory ----> $cfg_ysite"
 
+# Figure out which compilation flags and libraries to use.
+cfg_use_mkl="no"
+cfg_pkg_cc="\$(CC)"
+cfg_pkg_fc="\$(FC)"
+cfg_pkg_ld="\$(PKG_CC)"
+case "$cfg_interface" in
+    "" )
+    ;;
+    atlas )
+        # Use ATLAS library, see: http://math-atlas.sourceforge.net/errata.html#LINK
+        cfg_pkg_cflags="-I/usr/include/atlas"
+        pkg_deplibs="-L/usr/lib/atlas-base -llapack_atlas -lf77blas -lcblas -latlas"
+        ;;
+    gotoblas2 )
+        # Rules for compiling YLAPack plugin with GotoBlas2 library.
+        cfg_pkg_cflags="-DUSE_GOTOBLAS"
+        cfg_pkg_deplibs="-lgoto2 -lpthread"
+        cfg_pkg_ld="\$(PKG_FC)"
+        ;;
+    openblas )
+        # Rules for compiling YLAPack plugin with OpenBlas library.
+        cfg_pkg_cflags="-DUSE_OPENBLAS"
+        cfg_pkg_deplibs="-lopenblas -lpthread"
+        cfg_pkg_ld="\$(PKG_FC)"
+        ;;
+    lapack )
+        # Rules for compiling YLAPack plugin with Lapack library.
+        cfg_pkg_cflags=""
+        cfg_pkg_deplibs="-llapack -lblas"
+        cfg_pkg_ld="\$(PKG_FC)"
+        ;;
+    mkl* )
+        case "$cfg_interface" in
+            mkl_gf | mkl_gf_ilp64 | mkl_gf_lp64 )
+                cfg_pkg_cc="gcc"
+                cfg_mkl_thread="mkl_gnu_thread"
+                ;;
+            mkl_intel | mkl_intel_ilp64 | mkl_intel_lp64 )
+                cfg_pkg_cc="icc"
+                cfg_mkl_thread="mkl_intel_thread"
+                ;;
+            * )
+                echo >&2 "Unknown MKL interface '$cfg_interface', should be one of:"
+                echo >&2 "  mkl_gf            32-bit machine, 32-bit integers, GNU compiler"
+                echo >&2 "  mkl_gf_lp64       64-bit machine, 32-bit integers, GNU compiler"
+                echo >&2 "  mkl_gf_ilp64      64-bit machine, 64-bit integers, GNU compiler"
+                echo >&2 "  mkl_intel         32-bit machine, 32-bit integers, Intel compiler"
+                echo >&2 "  mkl_intel_lp64    64-bit machine, 32-bit integers, Intel compiler"
+                echo >&2 "  mkl_intel_ilp64   64-bit machine, 64-bit integers, Intel compiler"
+
+                exit 1
+                ;;
+        esac
+        cfg_mkl_defs="-I\$(MKL_DIR)/include -DUSE_MKL"
+        case "$cfg_interface" in
+            mkl_*_ia32 )
+                cfg_mkl_arch="ia32"
+                cfg_mkl_defs="$cfg_mkl_defs -DINTEGER=int"
+                ;;
+            mkl_*_ilp64 )
+                cfg_mkl_arch="intel64"
+                cfg_mkl_defs="$cfg_mkl_defs -DMKL_ILP64 -DINTEGER=long"
+                ;;
+            mkl_*_lp64 )
+                cfg_mkl_arch="intel64"
+                cfg_mkl_defs="$cfg_mkl_defs -DINTEGER=int"
+                ;;
+        esac
+        cfg_mkl_interface=$cfg_interface
+        if test "x$MKL_DIR" = "x"; then
+            cfg_mkl_dir=/opt/intel/mkl
+        else
+            cfg_mkl_dir=$MKL_DIR
+        fi
+        if test "$cfg_link" = "static"; then
+           cfg_mkl_libs="-Wl,--start-group \"\$(MKL_DIR)/lib/\$(MKL_ARCH)/lib\$(MKL_INTERFACE).a\" \"\$(MKL_DIR)/lib/\$(MKL_ARCH)/lib\$(MKL_THREAD).a\" \"\$(MKL_DIR)/lib/\$(MKL_ARCH)/libmkl_core.a\" -Wl,--end-group -openmp -lpthread"
+        else
+            cfg_mkl_libs="-L\"\$(MKL_DIR)/lib/\$(MKL_ARCH)\" -l\"\$(MKL_INTERFACE)\" -l\"\$(MKL_THREAD)\" -lmkl_core -openmp -lpthread"
+        fi
+        cfg_use_mkl="yes"
+        cfg_pkg_cflags="\$(MKL_DEFS)"
+        cfg_pkg_deplibs="\$(MKL_LIBS)"
+        ;;
+    *)
+        echo >&2 "Unknown interface '$cfg_interface', should be one of:"
+        echo >&2 "  lapack            Lapack libraries"
+        echo >&2 "  atlas             Atlas libraries"
+        echo >&2 "  gotoblas2         GotBlas libraries"
+        echo >&2 "  openblas          OpenBlas libraries"
+        echo >&2 "  mkl_gf            MKL libraries for 32-bit machine, 32-bit integers, GNU compiler"
+        echo >&2 "  mkl_gf_lp64       MKL libraries for 64-bit machine, 32-bit integers, GNU compiler"
+        echo >&2 "  mkl_gf_ilp64      MKL libraries for 64-bit machine, 64-bit integers, GNU compiler"
+        echo >&2 "  mkl_intel         MKL libraries for 32-bit machine, 32-bit integers, Intel compiler"
+        echo >&2 "  mkl_intel_lp64    MKL libraries for 64-bit machine, 32-bit integers, Intel compiler"
+        echo >&2 "  mkl_intel_ilp64   MKL libraries for 64-bit machine, 64-bit integers, Intel compiler"
+        exit 1
+        ;;
+esac
+
 # Create the Makefile.
 cfg_dst="./Makefile"
 if test "$cfg_inplace" = "yes"; then
@@ -191,11 +299,21 @@ cfg_add_rule "Y_EXE"       "$cfg_yorick"
 cfg_add_rule "Y_MAKEDIR"   "$cfg_ymkdir"
 cfg_add_rule "Y_EXE_HOME"  "$cfg_yhome"
 cfg_add_rule "Y_EXE_SITE"  "$cfg_ysite"
-cfg_add_rule "PKG_CFLAGS"  "$cfg_cflags"
-cfg_add_rule "PKG_DEPLIBS" "$cfg_deplibs"
-cfg_add_rule "PKG_LDFLAGS" "$cfg_ldflags"
-cfg_add_rule "MODEL"       "$cfg_model"
+cfg_add_rule "PKG_CC"      "$cfg_pkg_cc"
+cfg_add_rule "PKG_FC"      "$cfg_pkg_fc"
+cfg_add_rule "PKG_LD"      "$cfg_pkg_ld"
+cfg_add_rule "PKG_CFLAGS"  "$cfg_pkg_cflags"
+cfg_add_rule "PKG_DEPLIBS" "$cfg_pkg_deplibs"
+cfg_add_rule "PKG_LDFLAGS" "$cfg_pkg_ldflags"
 cfg_add_rule "srcdir"      "$cfg_srcdir"
+if test "$cfg_use_mkl" = "yes"; then
+    cfg_add_rule "MKL_DIR"       "$cfg_mkl_dir"
+    cfg_add_rule "MKL_ARCH"      "$cfg_mkl_arch"
+    cfg_add_rule "MKL_INTERFACE" "$cfg_mkl_interface"
+    cfg_add_rule "MKL_THREAD"    "$cfg_mkl_thread"
+    cfg_add_rule "MKL_DEFS"      "$cfg_mkl_defs"
+    cfg_add_rule "MKL_LIBS"      "$cfg_mkl_libs"
+fi
 sed < "$cfg_src" > "$cfg_dst" -e "$cfg_filter"
 
 if test "$cfg_inplace" = "yes"; then

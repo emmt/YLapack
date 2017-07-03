@@ -1,0 +1,6 @@
+# default rules when packge is not yet configured                       -*- Makefile -*-
+all:
+	@echo "*** WARNING: Y_MAKEDIR not defined, you may run 'configure' or 'yorick -batch make.i' first"
+	@false
+clean::
+	rm -f *~ *.o $(PKG_CLEAN)

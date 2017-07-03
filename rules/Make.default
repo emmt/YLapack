@@ -1,2 +1,0 @@
-PKG_CFLAGS= -I/usr/include/atlas
-PKG_DEPLIBS= -llapack -lblas

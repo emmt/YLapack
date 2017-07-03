@@ -1,7 +1,0 @@
-# Rules for compiling YLapack plugin with OpenBlas library (based on GotoBlas2).
-PKG_CFLAGS= -DUSE_GOTOBLAS
-PKG_DEPLIBS= -L. -lopenblas -lpthread
-
-# The FORTRAN COMPILER is needed to link the plugin.
-FC = gfortran
-LD_DLL=$(FC) $(LDFLAGS) $(PLUG_SHARED)

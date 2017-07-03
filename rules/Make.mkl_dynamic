@@ -1,6 +1,0 @@
-# Rules to use MKL:
-MKL_DIR = /opt/intel/mkl
-PKG_CFLAGS= -DUSE_MKL $(MKL_DEFS) -I"$(MKL_DIR)"/include
-PKG_DEPLIBS= -L"$(MKL_DIR)/lib/$(MKL_ARCH)" -l"$(MKL_INTERFACE)" \
-              -l"$(MKL_THREAD)" -lmkl_core -openmp -lpthread
-

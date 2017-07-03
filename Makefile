@@ -2,7 +2,7 @@
 srcdir=.
 
 # these values filled in by `yorick -batch make.i`
-Y_MAKEDIR=
+Y_MAKEDIR=$(srcdir)/config
 Y_EXE=
 Y_EXE_PKGS=
 Y_EXE_HOME=
@@ -22,79 +22,83 @@ PKG_I=$(srcdir)/lapack.i
 
 OBJS = ylapack.o
 
-# Makefile variables PKG_CFLAGS and PKG_DEPLIBS must be defined to compile
-# and link with your preferred version of LAPACK.
+# Makefile variables PKG_CFLAGS and PKG_DEPLIBS must be defined to compile and
+# link with your preferred version of LAPACK.  Variables PKG_CC, PKG_FC and
+# PKG_LD may have to be defined.
 #
-#   PKG_CFLAGS is for pre-processor directives
+#   PKG_CFLAGS is for pre-processor directives;
 #
-#   PKG_DEPLIBS is for libraries
+#   PKG_DEPLIBS is for libraries;
+#
+#   PKG_CC is the C compiler;
+#
+#   PKG_FC is the Fortran compiler;
+#
+#   PKG_LD is the command used to link the dynamic plug-in, it is usually the C
+#          compiler or the Fortran compiler;
 #
 # in PKG_CFLAGS, you may define some pre-processor macros:
 #
-#   -DUSE_GOTOBLAS  - to use GotoBlas;
+#   -DUSE_GOTOBLAS  - to use GotoBLAS;
+#   -DUSE_OPENBLAS  - to use OpenBLAS;
 #   -DUSE_MKL       - to use the "Math Kernel Library";
 #   -DUSE_CBLAS     - to use C-BLAS interface GotoBlas (set by default when
 #                     USE_GOTOBLAS or USE_MKL are defined);
 #   -DINTEGER=long  - if a Fortran INTEGER is a "long int" rather than a
 #                     just an "int" as assumed by default;
 #
-MODEL = default
+PKG_CFLAGS=
+PKG_DEPLIBS=-llapack -lblas
+PKG_CC=$(CC)
+PKG_FC=$(FC)
+PKG_LD=$(PKG_CC)
 
+# Variables for using the Intel Math Kernel Library (MKL):
+MKL_DIR=
+MKL_ARCH=
+MKL_INTERFACE=
+MKL_THREAD=
+MKL_DEFS=
+MKL_LIBS=
+#
 # To use MKL for ia32 processor:
-# MKL_DIR = /opt/intel/mkl
-# MKL_ARCH = ia32
-# MKL_INTERFACE = mkl_gf
-# MKL_THREAD = mkl_gnu_thread
-# MKL_CORE = mkl_core
-# MKL_DEFS = -DUSE_MKL -DINTEGER=int -I$(MKL_DIR)/include
-# PKG_CFLAGS = $(MKL_DEFS)
-# PKG_DEPLIBS = -L$(MKL_DIR)/lib/$(MKL_ARCH) -l$(MKL_INTERFACE) \
-#    -l$(MKL_THREAD) -l$(MKL_CORE)
-
+#     MKL_DIR = /opt/intel/mkl
+#     MKL_ARCH = ia32
+#     MKL_INTERFACE = mkl_gf
+#     MKL_THREAD = mkl_gnu_thread
+#     MKL_DEFS = -DUSE_MKL -DINTEGER=int -I$(MKL_DIR)/include
+#     MKL_LIBS = -L$(MKL_DIR)/lib/$(MKL_ARCH) -l$(MKL_INTERFACE) \
+#        -l$(MKL_THREAD) -lmkl_core
+#     PKG_CFLAGS = $(MKL_DEFS)
+#     PKG_DEPLIBS = $(MKL_LIBS)
+#
 # To use MKL for intel64 processor with 32-bit integers:
-# MKL_DIR = /opt/intel/mkl
-# MKL_ARCH = intel64
-# MKL_INTERFACE = mkl_gf_lp64
-# MKL_THREAD = mkl_gnu_thread
-# MKL_CORE = mkl_core
-# MKL_DEFS = -DUSE_MKL -DINTEGER=int -I$(MKL_DIR)/include
-# PKG_CFLAGS = $(MKL_DEFS)
-# PKG_DEPLIBS = -L$(MKL_DIR)/lib/$(MKL_ARCH) -l$(MKL_INTERFACE) \
-#    -l$(MKL_THREAD) -l$(MKL_CORE)
-
+#     MKL_DIR = /opt/intel/mkl
+#     MKL_ARCH = intel64
+#     MKL_INTERFACE = mkl_gf_lp64
+#     MKL_CORE = mkl_core
+#     MKL_DEFS = -DUSE_MKL -DINTEGER=int -I$(MKL_DIR)/include
+#     MKL_LIBS = -L$(MKL_DIR)/lib/$(MKL_ARCH) -l$(MKL_INTERFACE) \
+#        -l$(MKL_THREAD) -lmkl_core
+#     PKG_CFLAGS = $(MKL_DEFS)
+#     PKG_DEPLIBS = $(MKL_LIBS)
+#
 # To use MKL for intel64 processor with 64-bit integers:
-# MKL_DIR = /opt/intel/mkl
-# MKL_ARCH = intel64
-# MKL_INTERFACE = mkl_gf_ilp64
-# MKL_THREAD = mkl_gnu_thread
-# MKL_CORE = mkl_core
-# MKL_DEFS = -DUSE_MKL -DMKL_ILP64 -DINTEGER=long -I$(MKL_DIR)/include
-# PKG_CFLAGS = $(MKL_DEFS)
-# PKG_DEPLIBS = -L$(MKL_DIR)/lib/$(MKL_ARCH) -l$(MKL_INTERFACE) \
-#    -l$(MKL_THREAD) -l$(MKL_CORE)
-
+#     MKL_DIR = /opt/intel/mkl
+#     MKL_ARCH = intel64
+#     MKL_INTERFACE = mkl_gf_ilp64
+#     MKL_THREAD = mkl_gnu_thread
+#     MKL_DEFS = -DUSE_MKL -DMKL_ILP64 -DINTEGER=long -I$(MKL_DIR)/include
+#     MKL_LIBS = -L$(MKL_DIR)/lib/$(MKL_ARCH) -l$(MKL_INTERFACE) \
+#        -l$(MKL_THREAD) -lmkl_core
+#     PKG_CFLAGS = $(MKL_DEFS)
+#     PKG_DEPLIBS = $(MKL_LIBS)
 
 YLAPACK_HEADERS = \
     $(srcdir)/ylapack.h \
     $(srcdir)/ylapack_lapack.h \
     $(srcdir)/ylapack_blas.h \
     $(srcdir)/ylapack_cblas.h
-
-YLAPACK_RULES = \
-    $(srcdir)/rules/Make.atlas \
-    $(srcdir)/rules/Make.default \
-    $(srcdir)/rules/Make.gotoblas2 \
-    $(srcdir)/rules/Make.icc \
-    $(srcdir)/rules/Make.mkl \
-    $(srcdir)/rules/Make.mkl_dynamic \
-    $(srcdir)/rules/Make.mkl_gnu_ia32 \
-    $(srcdir)/rules/Make.mkl_gnu_ilp64 \
-    $(srcdir)/rules/Make.mkl_gnu_lp64 \
-    $(srcdir)/rules/Make.mkl_icc_ia32 \
-    $(srcdir)/rules/Make.mkl_icc_ilp64 \
-    $(srcdir)/rules/Make.mkl_icc_lp64 \
-    $(srcdir)/rules/Make.mkl_static \
-    $(srcdir)/rules/Make.openblas
 
 # change to give the executable a name other than yorick
 PKG_EXENAME=yorick
@@ -119,17 +123,19 @@ PKG_I_EXTRA=
 
 RELEASE_FILES = \
     $(srcdir)/AUTHORS \
-    $(srcdir)/LICENSE \
+    $(srcdir)/LICENSE.md \
     $(srcdir)/Makefile \
-    $(srcdir)/NEWS \
-    $(srcdir)/README \
+    $(srcdir)/NEWS.md \
+    $(srcdir)/README.md \
     $(srcdir)/TODO \
     $(PKG_I) \
     $(PKG_I_EXTRA) \
     $(srcdir)/lapack-test.i \
     $(YLAPACK_HEADERS) \
     $(srcdir)/ylapack.c \
-    $(YLAPACK_RULES)
+    $(srcdir)/config/Make \
+    $(srcdir)/config/Make.cfg \
+    $(srcdir)/config/Makepkg
 
 RELEASE_NAME = $(PKG_NAME)-$(RELEASE_VERSION).tar.bz2
 
@@ -142,18 +148,12 @@ RELEASE_NAME = $(PKG_NAME)-$(RELEASE_VERSION).tar.bz2
 PKG_I_DEPS=$(PKG_I)
 Y_DISTMAKE=distmake
 
-ifeq (,$(strip $(Y_MAKEDIR)))
-$(info *** WARNING: Y_MAKEDIR not defined, you may run 'configure' or 'yorick -batch make.i' first)
-else
 include $(Y_MAKEDIR)/Make.cfg
 include $(Y_MAKEDIR)/Makepkg
 include $(Y_MAKEDIR)/Make$(TGT)
-endif
 
-ifeq (,$(strip $(MODEL)))
-else
-include $(srcdir)/rules/Make.$(MODEL)
-endif
+# override macros LD_DLL because the Fortran may be needed in sme cases
+LD_DLL=$(PKG_LD) $(LDFLAGS) $(PLUG_SHARED)
 
 # override macros Makepkg sets for rules and other macros
 # Y_HOME and Y_SITE in Make.cfg may not be correct (e.g.- relocatable)
@@ -169,14 +169,9 @@ MAKE_TEMPLATE = protect-against-1.5
 dummy-default:
 	@echo >&2 "*** ERROR: Y_MAKEDIR not defined, aborting..."; false
 
+# Rule to compile C-code:
 %.o: ${srcdir}/%.c
-	$(CC) -I$(srcdir) $(CPPFLAGS) $(CFLAGS) -o "$@" -c "$<"
-
-# simple example:
-#myfunc.o: myapi.h
-# more complex example (also consider using PKG_CFLAGS above):
-#myfunc.o: myapi.h myfunc.c
-#	$(CC) $(CPPFLAGS) $(CFLAGS) -DMY_SWITCH -o $@ -c myfunc.c
+	$(PKG_CC) -I$(srcdir) $(CPPFLAGS) $(CFLAGS) -o "$@" -c "$<"
 
 FETCH_DEFS=tclsh $(srcdir)/fetch.tcl
 LAPACK_LIBRARY=/usr/lib/atlas-base/atlas/liblapack.a
@@ -188,7 +183,7 @@ ylapack_blas.def: fetch.tcl
 ylapack.o: $(srcdir)/ylapack.c Makefile $(YLAPACK_HEADERS)
 test_version.o: $(srcdir)/test_version.c Makefile $(YLAPACK_HEADERS)
 test_version$(EXE_SFX): test_version.o $(YLAPACK_HEADERS)
-	$(CC) $(LDFLAGS) -o "$@" "$<" $(PKG_DEPLIBS) $(MATHLIB)
+	$(PKG_LD) $(LDFLAGS) -o "$@" "$<" $(PKG_DEPLIBS) $(MATHLIB)
 
 release: $(RELEASE_NAME)
 
@@ -202,11 +197,11 @@ $(RELEASE_NAME):
 	  elif test -d "$$dir"; then \
 	    echo >&2 "directory $$dir already exists"; \
 	  else \
-	    mkdir -p "$$dir" "$$dir/rules"; \
+	    mkdir -p "$$dir" "$$dir/config"; \
 	    for src in $(RELEASE_FILES); do \
 	      base=`basename "$$src"`; \
-	      if echo "x$$src" | grep -q '/rules/[^/]*$$'; then \
-	        dst="$$dir/rules/$$base"; \
+	      if echo "x$$src" | grep -q '/config/[^/]*$$'; then \
+	        dst="$$dir/config/$$base"; \
 	      else \
 	        dst="$$dir/$$base"; \
 	      fi; \

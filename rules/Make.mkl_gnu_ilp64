@@ -1,8 +1,0 @@
-# Rules to use MKL for Intel-64 processor and with 64-bit integers
-# and GNU compiler:
-MKL_DIR = /opt/intel/mkl
-MKL_ARCH = intel64
-MKL_DEFS = -DMKL_ILP64
-MKL_INTERFACE = mkl_gf_ilp64
-MKL_THREAD = mkl_gnu_thread
-include $(srcdir)/rules/Make.mkl
