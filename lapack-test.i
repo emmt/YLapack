@@ -36,8 +36,8 @@ func gettimeofday(nil)
   return result;
 }
 
-plug_dir,".";
-include,"lapack.i";
+//plug_dir,".";
+//include,"lapack.i";
 //func lpk_gesv(..) {return 0.0;}
 
 func lpk_test_warmup
@@ -75,14 +75,14 @@ func lpk_test_blas1(size=, nloops=)
     write, format="lpk_scal, %g, x; ---> %g\n",
       alpha(k), max(abs(x - alpha(k)*x0));
   }
-  
+
   for (k = 1; k <= numberof(alpha); ++k) {
     x = x0;
     lpk_scal, alpha(k), x, ::-1;
     write, format="lpk_scal, %g, x, ::-1; ---> %g\n",
       alpha(k), max(abs(x - alpha(k)*x0));
   }
-  
+
 }
 
 func lpk_test_dot(size=, nloops=)
@@ -91,10 +91,10 @@ func lpk_test_dot(size=, nloops=)
   if (is_void(nloops)) nloops = 100;
   x = random(size);
   y = random(size);
-  
+
   if (nloops >= 1) {
     lpk_test_warmup;
-    
+
     timer_start;
     for (k=1;k<=nloops;++k) {
       res1 = sum(x*y);
@@ -109,7 +109,7 @@ func lpk_test_dot(size=, nloops=)
     write, format="%s", "results for lpk_dot:  ";
     timer_elapsed, nloops;
   }
-  
+
   if (nloops < 1) {
     res1 = sum(x*y);
     res2 = lpk_dot(x, y);
@@ -150,13 +150,13 @@ func lpk_bench_gesv(size=, ntrials=, nsecs=)
   if (is_void(nsecs)) nsecs = 10.0; // minimum number of seconds
 
   hline = "---------------------------------------------------------------------";
-  
+
   for (k = 1; k <= numberof(size); ++k) {
     if (k == 1) {
       write, format = "%s\n%s\n%s\n%s\n",
         hline,
         "                 Yorick                    Lapack",
-        "  size           LUsolve                  lpk_gesv",  
+        "  size           LUsolve                  lpk_gesv",
         hline;
     }
     n = size(k);
@@ -216,7 +216,7 @@ func lpk_test_gesv(n, nloops=)
 
   if (nloops >= 1) {
     lpk_test_warmup;
-    
+
     //t0 = gettimeofday();
     timer_start;
     for (k=1;k<=nloops;++k) {
@@ -227,7 +227,7 @@ func lpk_test_gesv(n, nloops=)
     //t1 = gettimeofday();
     //write, format="total time: %g s/iterations\n",
     //  sum((t1 - t0)*[1.0, 1e-6])/nloops;
-    
+
     //t0 = gettimeofday();
     timer_start;
     for (k=1;k<=nloops;++k) {
@@ -239,7 +239,7 @@ func lpk_test_gesv(n, nloops=)
     //write, format="total time: %g s/iterations\n",
     //  sum((t1 - t0)*[1.0, 1e-6])/nloops;
   }
-  
+
   if (nloops < 1) {
     x1 = LUsolve(a, b);
     x2 = lpk_gesv(a, b);
@@ -260,7 +260,7 @@ func lpk_test0(m)
     b = a;
     lpk_potrf, LPK_UPPER, b;
   }
-  
+
 }
 
 
@@ -272,14 +272,14 @@ func lpk_test1(from=, to=, step=, type=)
   if (is_void(to)) to = 200;
   if (is_void(step)) step = 1;
   if (is_void(type)) type = float;
-  
+
   swrite, format="From : %3d  To : %3d Step = %3d\n", from, to, step;
 
   for (m = from; m <= to; m += step) {
 
     swrite, format="M = %6d : ", m;
     b = array(type, m, m);
-    
+
     for (pass = 1; pass <= 2; ++pass) {
       a = array(type, m, m);
       a(1:m*m:m+1) = 8.0 + random(m);
@@ -320,10 +320,8 @@ func lpk_test1(from=, to=, step=, type=)
       lpk_potrf, uplo, b;
       pm, b, format="%6.3f";
     }
-  } 
+  }
 }
-
-
 
 func lpk_test_gesvd(m,n,type=,full=,dac=)
 {
@@ -339,9 +337,9 @@ func lpk_test_gesvd(m,n,type=,full=,dac=)
   } else {
     error, "TYPE must be: float, double or complex";
   }
-  
+
   a0 = a;
-  
+
   t = (dac ? lpk_gesdd : lpk_gesvd)(a,s,u,vt);
   if (t !=0) error;
 
@@ -353,17 +351,17 @@ func lpk_test_gesvd(m,n,type=,full=,dac=)
     write, format="checking %s: ", "S";
     stat, s - s0;
   }
-  
+
   p = min(m,n);
   t = u(,1:p)(,+)*(s*vt(1:p,))(+,);
 
   write, format="checking %s: ", "A";
   stat, a - t;
-  
+
 
   //write, format="checking %s: ", "U";
   //stat, u - u0;
-  // 
+  //
   //write, format="checking %s: ", "V";
   //stat, vt - v0t;
 
