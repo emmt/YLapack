@@ -28,11 +28,60 @@ The reasons for this interface are multiples:
    generalizes the rules for the dot product so that it can be applied on
    several consecutive dimensions at the same time.
 
-The current version of YLapack is merely a proof of concept to check whether
-Yorick can call multi-threaded functions and benefit from the speed up of one
-of the LAPACK implementation for your machine: GotoBlas, MKL, Atlas, etc.  The
-main limitation is that only a subset of BLAS and LAPACK functions have been
+YLapack started as a proof of concept to check whether Yorick can call
+multi-threaded functions and benefit from the speed up of one of the LAPACK
+implementation for your machine: GotoBlas, MKL, Atlas, etc.  The main
+limitation is that only a subset of BLAS and LAPACK functions have been
 interfaced.
+
+
+## INSTALLATION
+
+Unpack the archive
+[ylapack-0.0.5.tar.bz2](https://github.com/emmt/YLAPack/releases/download/v0.0.5/ylapack-0.0.5.tar.bz2)
+and run the `configure` script:
+
+    cd ylapack-0.0.5
+    ./configure [OPTIONS ...]
+
+where `[OPTIONS ...]` denotes a number configuration settings.  Option `--help`
+can be used to query a short description of available options but essentially,
+you want to indicate, with option `--interface`, the type of LAPACK interface
+(Atlas, OpenBLAS, GotoBLAS, MKL, etc.) that is to be used with the plug-in.
+Known interfaces are:
+
+- `lapack` for Lapack libraries;
+- `atlas` for Atlas libraries;
+- `gotoblas2` for GotBlas libraries
+- `openblas` for OpenBlas libraries
+- `mkl_gf` for MKL libraries for 32-bit machine, 32-bit integers, GNU compiler;
+- `mkl_gf_lp64` for MKL libraries for 64-bit machine, 32-bit integers, GNU
+  compiler;
+- `mkl_gf_ilp64` for MKL libraries for 64-bit machine, 64-bit integers, GNU
+  compiler;
+- `mkl_intel` for MKL libraries for 32-bit machine, 32-bit integers, Intel
+  compiler
+- `mkl_intel_lp64` for MKL libraries for 64-bit machine, 32-bit integers, Intel
+  compiler;
+- `mkl_intel_ilp64` for MKL libraries for 64-bit machine, 64-bit integers,
+  Intel compiler
+
+Running the `configure` script creates a `Makefile` in the current directory
+which for compiling and installing the plug-in.  After running the `configure`
+script, you may edit it to fix the configuration.  Compilation and installaion
+(in Yorick directory tree) is then as simple as:
+
+    make
+    make install
+
+The `configure` script can be run from elsewhere to build the plug-in without
+changing the files in the source directory.  For instance:
+
+    mkdir -p build
+    cd build
+    ../configure --interface=openblas
+    make
+    make install
 
 
 ## PORTABILITY
@@ -284,4 +333,3 @@ http://software.intel.com/en-us/articles/intel-mkl-link-line-advisor/
 To start Yorick with a given `LD_LIBRARY_PATH`:
 
     LD_LIBRARY_PATH=/opt/intel/lib/intel64:/usr/local/lib rlwrap yorick
-
