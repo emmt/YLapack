@@ -1,7 +1,7 @@
 /*
  * ylapack.h --
  *
- * Definitions for BLAS, CBLAS, GOTOBLAS and LAPACK.
+ * Definitions for BLAS, CBLAS, GOTOBLAS, OPENBLAS and LAPACK.
  *
  *-----------------------------------------------------------------------------
  *
@@ -66,7 +66,7 @@ typedef struct _ylpk_complex16 ylpk_complex16;
 # define COMPLEX16_PTR void *
 #endif
 
-#if defined(USE_GOTOBLAS) || defined(USE_MKL)
+#if defined(USE_GOTOBLAS) || defined(USE_OPENBLAS) || defined(USE_MKL)
 # define USE_CBLAS /* GotoBlas and MKL includes a version of CBLAS */
 #endif
 

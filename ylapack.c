@@ -1,7 +1,7 @@
 /*
  * ylapack.c --
  *
- * Implements Yorick interface to (C/GOTO)BLAS and LAPACK.
+ * Implements Yorick interface to (C/GOTO/OPEN)BLAS and LAPACK.
  *
  *-----------------------------------------------------------------------------
  *
@@ -75,9 +75,6 @@ static  float *push_copy_f(const  float *src, const long dims[]);
 static double *push_copy_d(const double *src, const long dims[]);
 static double *push_copy_z(const double *src, const long dims[]);
 
-static void get_lapack_trans(int iarg, CHARACTER trans[2]);
-static void get_lapack_uplo(int iarg, CHARACTER uplo[2]);
-
 /* The following structure is used to collect all the informations
    representing a linear system like A.X = B. */
 typedef struct _linear_system linear_system_t;
@@ -98,31 +95,30 @@ static long get_linear_system(linear_system_t *sys,
 #define COMPLEX_SYSTEM         (1 << 1)
 #define REAL_OR_COMPLEX_SYSTEM (REAL_SYSTEM | COMPLEX_SYSTEM)
 
-
 #ifdef USE_CBLAS
-static CBLAS_DIAG get_cblas_diag(int iarg);
-static CBLAS_ORDER get_cblas_order(int iarg);
-static CBLAS_SIDE get_cblas_side(int iarg);
+#  if 0 /* FIXME: not yet used */
+static CBLAS_DIAG      get_cblas_diag(int iarg);
+static CBLAS_ORDER     get_cblas_order(int iarg);
+static CBLAS_SIDE      get_cblas_side(int iarg);
+#  endif
 static CBLAS_TRANSPOSE get_cblas_trans(int iarg);
-static CBLAS_UPLO get_cblas_uplo(int iarg);
-#endif
-
-#ifdef USE_CBLAS
-# define BLAS_ALTERNATIVE(cblas_expr, blas_expr) (cblas_expr)
-# define GET_BLAS_DIAG(iarg, var)   var = get_cblas_diag(iarg)
-# define GET_BLAS_ORDER(iarg, var)  var = get_cblas_order(iarg)
-# define GET_BLAS_SIDE(iarg, var)   var = get_cblas_side(iarg)
-# define GET_BLAS_TRANS(iarg, var)  var = get_cblas_trans(iarg)
-# define GET_BLAS_UPLO(iarg, var)   var = get_cblas_uplo(iarg)
-#else
-# define BLAS_ALTERNATIVE(cblas_expr, blas_expr) (blas_expr)
-# define GET_BLAS_DIAG(iarg, var)   get_lapack_diag(iarg, var)
-# define GET_BLAS_ORDER(iarg, var)  get_lapack_order(iarg, var)
-# define GET_BLAS_SIDE(iarg, var)   get_lapack_side(iarg, var)
-# define GET_BLAS_TRANS(iarg, var)  get_lapack_trans(iarg, var)
-# define GET_BLAS_UPLO(iarg, var)   get_lapack_uplo(iarg, var)
-#endif
-
+static CBLAS_UPLO      get_cblas_uplo(int iarg);
+#  define BLAS_ALTERNATIVE(cblas_expr, blas_expr) (cblas_expr)
+#  define GET_BLAS_DIAG(iarg, var)   var = get_cblas_diag(iarg)
+#  define GET_BLAS_ORDER(iarg, var)  var = get_cblas_order(iarg)
+#  define GET_BLAS_SIDE(iarg, var)   var = get_cblas_side(iarg)
+#  define GET_BLAS_TRANS(iarg, var)  var = get_cblas_trans(iarg)
+#  define GET_BLAS_UPLO(iarg, var)   var = get_cblas_uplo(iarg)
+#else /* not USE_CBLAS */
+static void get_lapack_trans(int iarg, CHARACTER trans[2]);
+#  define BLAS_ALTERNATIVE(cblas_expr, blas_expr) (blas_expr)
+#  define GET_BLAS_DIAG(iarg, var)   get_lapack_diag(iarg, var)
+#  define GET_BLAS_ORDER(iarg, var)  get_lapack_order(iarg, var)
+#  define GET_BLAS_SIDE(iarg, var)   get_lapack_side(iarg, var)
+#  define GET_BLAS_TRANS(iarg, var)  get_lapack_trans(iarg, var)
+#  define GET_BLAS_UPLO(iarg, var)   get_lapack_uplo(iarg, var)
+#endif /* USE_CBLAS */
+static void get_lapack_uplo(int iarg, CHARACTER uplo[2]);
 
 /* ORDER: */
 #define LPK_ROW_MAJOR  101
@@ -247,6 +243,8 @@ void Y_lpk_model(int argc)
   push_string("MKL (Intel Math kernel library)");
 #elif defined(USE_GOTOBLAS)
   push_string("GotoBLAS2");
+#elif defined(USE_OPENBLAS)
+  push_string("OpenBLAS");
 #elif defined(USE_ATLAS)
   push_string("Atlas");
 #else
@@ -2639,6 +2637,7 @@ static void get_z(int iarg, double z[2])
 
 #ifdef USE_CBLAS
 
+#  if 0 /* FIXME: not yet used */
 static CBLAS_DIAG get_cblas_diag(int iarg)
 {
   switch (ygets_i(iarg)) {
@@ -2648,7 +2647,9 @@ static CBLAS_DIAG get_cblas_diag(int iarg)
   y_error("invalid value for DIAG");
   return CblasNonUnit; /* to avoid compiler warnings */
 }
+#  endif
 
+#  if 0 /* FIXME: not yet used */
 static CBLAS_ORDER get_cblas_order(int iarg)
 {
   switch (ygets_i(iarg)) {
@@ -2658,7 +2659,9 @@ static CBLAS_ORDER get_cblas_order(int iarg)
   y_error("invalid value for ORDER");
   return CblasColMajor; /* to avoid compiler warnings */
 }
+#  endif
 
+#  if 0 /* FIXME: not yet used */
 static CBLAS_SIDE get_cblas_side(int iarg)
 {
   switch (ygets_i(iarg)) {
@@ -2668,6 +2671,7 @@ static CBLAS_SIDE get_cblas_side(int iarg)
   y_error("invalid value for SIDE");
   return CblasLeft; /* to avoid compiler warnings */
 }
+#  endif
 
 static CBLAS_TRANSPOSE get_cblas_trans(int iarg)
 {
@@ -2690,7 +2694,7 @@ static CBLAS_UPLO get_cblas_uplo(int iarg)
   return CblasUpper; /* to avoid compiler warnings */
 }
 
-#endif /* USE_CBLAS */
+#else /* not USE_CBLAS */
 
 static void get_lapack_trans(int iarg, CHARACTER trans[2])
 {
@@ -2702,6 +2706,8 @@ static void get_lapack_trans(int iarg, CHARACTER trans[2])
   }
   trans[1] = '\0';
 }
+
+#endif /* USE_CBLAS */
 
 static void get_lapack_uplo(int iarg, CHARACTER uplo[2])
 {
