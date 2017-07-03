@@ -1,3 +1,3 @@
 # see: http://math-atlas.sourceforge.net/errata.html#LINK
-LAPACK_DEFS =
-LAPACK_LIBS = -L./lib/linux/intel64/ifort -llapack -lblas
+PKG_CFLAGS=
+PKG_DEPLIBS= -L./lib/linux/intel64/ifort -llapack -lblas

@@ -1,6 +1,6 @@
 # Rules for compiling YLapack plugin with GotoBlas library.
-LAPACK_DEFS = -DUSE_GOTOBLAS
-LAPACK_LIBS = -L. -lgoto2 -lpthread
+PKG_CFLAGS= -DUSE_GOTOBLAS
+PKG_DEPLIBS= -L. -lgoto2 -lpthread
 
 # The FORTRAN COMPILER is needed to link the plugin.
 FC = gfortran

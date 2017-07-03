@@ -4,4 +4,4 @@ MKL_ARCH = ia32
 MKL_DEFS =
 MKL_INTERFACE = mkl_gf
 MKL_THREAD = mkl_gnu_thread
-include rules/Make.mkl
+include $(srcdir)/rules/Make.mkl

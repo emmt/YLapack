@@ -1,2 +1,2 @@
-LAPACK_DEFS = -I/usr/include/atlas
-LAPACK_LIBS = -llapack -lblas
+PKG_CFLAGS= -I/usr/include/atlas
+PKG_DEPLIBS= -llapack -lblas

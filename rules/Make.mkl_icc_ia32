@@ -4,5 +4,5 @@ MKL_ARCH = ia32
 MKL_DEFS =
 MKL_INTERFACE = mkl_intel
 MKL_THREAD = mkl_intel_thread
-include rules/Make.mkl
-include rules/Make.icc
+include $(srcdir)/rules/Make.mkl
+include $(srcdir)/rules/Make.icc
