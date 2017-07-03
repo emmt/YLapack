@@ -3159,12 +3159,12 @@ void Y_lpk_fit_dict(int argc)
       } else {
         /* Solving the normal equations failed. */
         if (info < 0) {
-          swrite(msgbuf, "bug: illegal argument %d in calling DPOSV",
-                 -(int)info);
+          sprintf(msgbuf, "bug: illegal argument %d in calling DPOSV",
+                  -(int)info);
         } else {
-          swrite(msgbuf,
-                 "the leading minor of order %d of A is not positive definite",
-                 (int)info);
+          sprintf(msgbuf,
+                  "the leading minor of order %d of A is not positive definite",
+                  (int)info);
         }
         y_error(msgbuf);
       }
