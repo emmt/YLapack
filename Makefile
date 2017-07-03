@@ -113,7 +113,7 @@ EXTRA_PKGS=$(Y_EXE_PKGS)
 PKG_CLEAN=
 
 # autoload file for this package, if any
-PKG_I_START=
+PKG_I_START=$(srcdir)/lapack-start.i
 # non-pkg.i include files for this package, if any
 PKG_I_EXTRA=
 
@@ -124,10 +124,11 @@ RELEASE_FILES = \
     $(srcdir)/NEWS \
     $(srcdir)/README \
     $(srcdir)/TODO \
-    $(PKG_I) $(PKG_I_EXTRA) \
+    $(PKG_I) \
+    $(PKG_I_EXTRA) \
+    $(srcdir)/lapack-test.i \
     $(YLAPACK_HEADERS) \
     $(srcdir)/ylapack.c \
-    $(srcdir)/lapack-test.i \
     $(YLAPACK_RULES)
 
 RELEASE_NAME = $(PKG_NAME)-$(RELEASE_VERSION).tar.bz2
