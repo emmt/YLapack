@@ -122,6 +122,7 @@ PKG_I_START=$(srcdir)/lapack-start.i
 PKG_I_EXTRA=
 
 RELEASE_FILES = \
+    $(srcdir)/configure \
     $(srcdir)/AUTHORS \
     $(srcdir)/LICENSE.md \
     $(srcdir)/Makefile \
